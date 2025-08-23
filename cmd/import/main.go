@@ -14,7 +14,7 @@ import (
 
 var (
 	dbPath     = "./bitemporal.db"
-	schemaFile = "schema.sql"
+	schemaFile = "sql/schema.sql"
 	testDbDir  = "test_db-1.0.7"
 )
 

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-//go:embed update_window.tmpl.sql
+//go:embed sql/update_window.tmpl.sql
 var createUpdateWindowQuery string
 
 type QueryFragment struct {
