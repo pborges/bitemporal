@@ -2,61 +2,76 @@ package main
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/olekukonko/tablewriter"
-	"github.com/pborges/bitemporal/internal/db"
+	"github.com/pborges/bitemporal/model"
 )
 
+func AsTime(s string) time.Time {
+	layout := time.DateTime
+	if !strings.Contains(s, " ") {
+		layout = time.DateOnly
+	}
+
+	t, err := time.Parse(layout, strings.TrimSpace(s))
+	if err != nil {
+		panic(err)
+	}
+	if t.IsZero() {
+		panic(errors.New("time is zero"))
+	}
+	return t
+}
+
 func main() {
-	database, err := sql.Open("sqlite3", "bitemporal.db")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetOutput(os.Stdout)
+
+	repo, err := model.NewRepository("bitemporal.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
-	defer database.Close()
+	defer repo.Close()
 
-	if err := database.Ping(); err != nil {
-		log.Fatal(err)
-	}
+	employeesRepo := model.NewEmployeeRepository(repo)
+	salariesRepo := model.NewSalaryRepository(repo)
 
-	queries := db.New(database)
+	dump(employeesRepo, salariesRepo, 1001, time.Now())
+	dump(employeesRepo, salariesRepo, 1001, AsTime("1993-02-17"))
 
-	log.Println("Successfully initialized SQLite database with sqlc")
-
-	ctx := context.Background()
-	var empNo int64 = 10009
-
-	titles, err := queries.GetEmployeeTitleTimeline(ctx, empNo)
+	fmt.Println("All Salaries")
+	ctx := model.WithValidTime(context.Background(), time.Time{})
+	salaries, err := salariesRepo.ForEmployee(ctx, 1001)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
+	}
+	for _, salary := range salaries {
+		fmt.Printf("  $%d %+v\n", salary.Salary, salary.BitemporalEntity)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.Header([]string{"Change Type", "Start Date", "End Date", "Description", "Transaction Time"})
+}
 
-	for _, title := range titles {
-		description := ""
-		if title.Description != nil {
-			description = fmt.Sprintf("%v", title.Description)
-		}
-
-		transactionTime := ""
-		if title.TransactionTime.Valid {
-			transactionTime = title.TransactionTime.Time.Format("2006-01-02 15:04:05")
-		}
-
-		table.Append([]string{
-			title.ChangeType,
-			title.ChangeDate.Format("2006-01-02"),
-			title.EndDate.Format("2006-01-02"),
-			description,
-			transactionTime,
-		})
+func dump(employeesRepo *model.EmployeeRepository, salariesRepo *model.SalaryRepository, empNo int64, t time.Time) {
+	fmt.Println("* DUMPING AS OF: ", t.Format(time.DateTime))
+	ctx := model.InitializeContext(context.Background())
+	ctx = model.WithValidTime(ctx, t)
+	employee, err := employeesRepo.ById(ctx, empNo)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	salaries, err := salariesRepo.ForEmployee(ctx, employee.EmpNo)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	table.Render()
+	fmt.Printf("Employee:\n  %s %s %s\nSalaries:\n", employee.FirstName, employee.LastName, employee.BitemporalEntity)
+	for _, salary := range salaries {
+		fmt.Printf("  $%d %+v\n", salary.Salary, salary.BitemporalEntity)
+	}
 }

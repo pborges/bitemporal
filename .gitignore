@@ -43,3 +43,6 @@ test_db-1.0.7/
 # Build artifacts
 bin/
 dist/
+
+# Claude Code settings
+.claude/

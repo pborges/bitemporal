@@ -3,24 +3,24 @@ package main
 import (
 	"bufio"
 	"database/sql"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
-	dbPath = "./bitemporal.db"
-	schemaDir = "db/schema"
-	testDbDir = "test_db-1.0.7"
+	dbPath     = "./bitemporal.db"
+	schemaFile = "schema.sql"
+	testDbDir  = "test_db-1.0.7"
 )
 
 func main() {
+	os.Remove(dbPath)
+
 	startTime := time.Now()
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -69,33 +69,16 @@ func main() {
 }
 
 func initializeSchema(db *sql.DB) error {
-	files, err := ioutil.ReadDir(schemaDir)
+	log.Printf("Executing schema file: %s", schemaFile)
+
+	schema, err := os.ReadFile(schemaFile)
 	if err != nil {
 		return err
 	}
 
-	// Sort files to ensure they run in order
-	var sqlFiles []string
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".sql" {
-			sqlFiles = append(sqlFiles, file.Name())
-		}
-	}
-	sort.Strings(sqlFiles)
-
-	for _, filename := range sqlFiles {
-		schemaPath := filepath.Join(schemaDir, filename)
-		log.Printf("Executing schema file: %s", filename)
-		
-		schema, err := ioutil.ReadFile(schemaPath)
-		if err != nil {
-			return err
-		}
-
-		_, err = db.Exec(string(schema))
-		if err != nil {
-			return err
-		}
+	_, err = db.Exec(string(schema))
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -118,8 +101,8 @@ func importEmployees(db *sql.DB) error {
 
 	// Prepare the insert statement
 	stmt, err := tx.Prepare(`
-		INSERT INTO employees (emp_no, first_name, last_name, hire_date, birth_date, gender, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, ?, ?, ?, ?, ?, '9999-12-31 23:59:59', ?)
+		INSERT INTO employees (emp_no, first_name, last_name, hire_date, birth_date, gender, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, ?, ?, ?, ?, ?, '9999-12-31 23:59:59', ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -184,8 +167,8 @@ func importDepartments(db *sql.DB) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO departments (dept_no, dept_name, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, '1985-01-01', '9999-12-31 23:59:59', ?)
+		INSERT INTO departments (dept_no, dept_name, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, '1985-01-01', '9999-12-31 23:59:59', ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -235,8 +218,8 @@ func importDeptEmp(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO dept_emp (emp_no, dept_no, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO dept_emp (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -288,8 +271,8 @@ func importDeptManager(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO dept_manager (emp_no, dept_no, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO dept_manager (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -340,8 +323,8 @@ func importTitles(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO titles (emp_no, title, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO titles (emp_no, title, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -392,8 +375,8 @@ func importSalaries(db *sql.DB) error {
 	}
 
 	stmt, err := db.Prepare(`
-		INSERT INTO salaries (emp_no, salary, valid_from, valid_to, transaction_time)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO salaries (emp_no, salary, valid_from, valid_to, transaction_from, transaction_to)
+		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
 	`)
 	if err != nil {
 		return err
@@ -451,7 +434,7 @@ func importSalaries(db *sql.DB) error {
 func optimizeDatabase(db *sql.DB) error {
 	pragmas := []string{
 		"PRAGMA journal_mode = MEMORY",
-		"PRAGMA synchronous = OFF", 
+		"PRAGMA synchronous = OFF",
 		"PRAGMA cache_size = 100000",
 		"PRAGMA temp_store = MEMORY",
 		"PRAGMA locking_mode = EXCLUSIVE",
