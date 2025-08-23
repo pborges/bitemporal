@@ -190,19 +190,20 @@ func updateWindowQuery(empNo int64, salary int64, validFrom, validTo string) str
 }
 
 func highlight(validTo string, validFrom string, salary int64, str string) string {
-	if strings.HasPrefix(str, validTo) {
+	if validTo != "" && strings.HasPrefix(str, validTo) {
 		return fmt.Sprintf("\033[31m%s\033[0m", str)
 	}
-	if strings.HasPrefix(str, validFrom) {
+	if validFrom != "" && strings.HasPrefix(str, validFrom) {
 		return fmt.Sprintf("\033[32m%s\033[0m", str)
 	}
-	if str == strconv.Itoa(int(salary)) {
+	if salary > 0 && str == strconv.Itoa(int(salary)) {
 		return fmt.Sprintf("\033[34m%s\033[0m", str)
 	}
 	return str
 }
 
 func printTable(salary int64, validFrom string, validTo string, rows []SalaryRow) {
+	zeroValues := salary == 0 && validFrom == "" && validTo == ""
 	table := tablewriter.NewTable(os.Stdout,
 		tablewriter.WithConfig(tablewriter.Config{
 			Footer: tw.CellConfig{
@@ -217,7 +218,10 @@ func printTable(salary int64, validFrom string, validTo string, rows []SalaryRow
 		highlight(validTo, validFrom, salary, validFrom),
 		highlight(validTo, validFrom, salary, validTo),
 	)
-	table.Footer(footer, footer, footer, footer, footer, footer)
+
+	if !zeroValues {
+		table.Footer(footer, footer, footer, footer, footer, footer)
+	}
 
 	for _, row := range rows {
 		table.Append([]string{
@@ -250,9 +254,9 @@ func getUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validF
 		}
 		salaryRows = append(salaryRows, row)
 	}
-	//if debug == false {
-	printTable(salary, validFrom, validTo, salaryRows)
-	//}
+	if debug {
+		printTable(salary, validFrom, validTo, salaryRows)
+	}
 	return salaryRows
 }
 
@@ -268,6 +272,36 @@ func createTestDB(t *testing.T) (*sql.DB, func()) {
 	}
 	return db, func() {
 		db.Close()
+	}
+}
+
+func TestCreateTestDB(t *testing.T) {
+	db, cleanup := createTestDB(t)
+	defer cleanup()
+
+	rows, err := db.Query("SELECT emp_no, salary, valid_from, valid_to, transaction_from, transaction_to FROM salaries ORDER BY valid_from")
+	if err != nil {
+		t.Fatalf("Failed to query salaries: %v", err)
+	}
+	defer rows.Close()
+
+	var salaryRows []SalaryRow
+	for rows.Next() {
+		var row SalaryRow
+		err = rows.Scan(&row.EmpNo, &row.Salary, &row.ValidFrom, &row.ValidTo, &row.TransactionFrom, &row.TransactionTo)
+		if err != nil {
+			t.Fatalf("Failed to scan row: %v", err)
+		}
+		salaryRows = append(salaryRows, row)
+	}
+
+	expectedCount := 18
+	if len(salaryRows) != expectedCount {
+		t.Errorf("Expected %d rows, got %d", expectedCount, len(salaryRows))
+	}
+
+	if debug {
+		printTable(0, "", "", salaryRows)
 	}
 }
 
