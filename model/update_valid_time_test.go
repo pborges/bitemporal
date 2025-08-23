@@ -191,10 +191,10 @@ func updateWindowQuery(empNo int64, salary int64, validFrom, validTo string) str
 
 func highlight(validTo string, validFrom string, salary int64, str string) string {
 	if strings.HasPrefix(str, validTo) {
-		return fmt.Sprintf("\033[32m%s\033[0m", str)
+		return fmt.Sprintf("\033[31m%s\033[0m", str)
 	}
 	if strings.HasPrefix(str, validFrom) {
-		return fmt.Sprintf("\033[31m%s\033[0m", str)
+		return fmt.Sprintf("\033[32m%s\033[0m", str)
 	}
 	if str == strconv.Itoa(int(salary)) {
 		return fmt.Sprintf("\033[34m%s\033[0m", str)
