@@ -9,10 +9,10 @@ CREATE TABLE IF NOT EXISTS employees
     gender           TEXT     NOT NULL CHECK (gender IN ('M', 'F', 'O')),
     hire_date        DATE     NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Departments table with bitemporal fields
@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS departments
     dept_no          TEXT     NOT NULL,
     dept_name        TEXT     NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Department managers with bitemporal fields
@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS dept_manager
     emp_no           INTEGER  NOT NULL,
     dept_no          TEXT     NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Department employees with bitemporal fields
@@ -48,10 +48,10 @@ CREATE TABLE IF NOT EXISTS dept_emp
     emp_no           INTEGER  NOT NULL,
     dept_no          TEXT     NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Titles with bitemporal fields
@@ -61,10 +61,10 @@ CREATE TABLE IF NOT EXISTS titles
     emp_no           INTEGER  NOT NULL,
     title            TEXT     NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Salaries with bitemporal fields
@@ -74,10 +74,10 @@ CREATE TABLE IF NOT EXISTS salaries
     emp_no           INTEGER  NOT NULL,
     salary           INTEGER  NOT NULL,
     -- Bitemporal fields
-    valid_from       DATE     NOT NULL,
-    valid_to         DATE     NOT NULL DEFAULT '9999-12-31 23:59:59',
+    valid_from       DATETIME NOT NULL,
+    valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    transaction_to  DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
+    transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
 
 -- Indexes for bitemporal queries

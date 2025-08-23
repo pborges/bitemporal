@@ -37,19 +37,20 @@ The `employees` table includes:
    go mod tidy
    ```
 
-2. Generate database code:
+2. Download the database zip and unzip it into the project directory https://github.com/datacharmer/test_db/archive/refs/tags/v1.0.7.zip
+
+3. Generate database code:
    ```bash
-   sqlc generate
+   go run cmd/import/main.go
    ```
 
-3. Run the application:
+4. Run the tests:
    ```bash
-   go run cmd/main.go
+   go test ./...
    ```
 
 ## Technology Stack
 
 - **Go 1.24**: Core application language
 - **SQLite**: Lightweight database for demo purposes
-- **sqlc**: Type-safe SQL code generation
 - **Bitemporal patterns**: For historical data tracking

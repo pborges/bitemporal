@@ -1,4 +1,4 @@
-package model
+package bitemporal
 
 import (
 	"context"
@@ -102,3 +102,7 @@ func (repo *Repository) QueryRow(ctx context.Context, query string, args ...any)
 	query, args = repo.prepareQuery(ctx, query, args)
 	return repo.db.QueryRow(query, args...)
 }
+
+//func (repo *Repository) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+//
+//}

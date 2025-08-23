@@ -8,7 +8,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pborges/bitemporal/model"
+	"github.com/pborges/bitemporal"
 )
 
 func AsTime(s string) time.Time {
@@ -31,34 +31,34 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
 
-	repo, err := model.NewRepository("bitemporal.db")
+	repo, err := bitemporal.NewRepository("bitemporal.db")
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer repo.Close()
 
-	employeesRepo := model.NewEmployeeRepository(repo)
+	employeesRepo := bitemporal.NewEmployeeRepository(repo)
 
-	err = employeesRepo.Save(model.Employee{
+	err = employeesRepo.Save(bitemporal.Employee{
 		EmpNo:     100,
 		FirstName: "John",
 		LastName:  "Smith",
 		Gender:    "M",
 		BirthDate: AsTime("1990-01-01"),
 		HireDate:  AsTime("2000-01-01"),
-	}, time.Now().Add(24*time.Hour*365*-1), model.EndOfTime)
+	}, time.Now().Add(24*time.Hour*365*-1), bitemporal.EndOfTime)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	err = employeesRepo.Save(model.Employee{
+	err = employeesRepo.Save(bitemporal.Employee{
 		EmpNo:     100,
 		FirstName: "John",
 		LastName:  "Smythe",
 		Gender:    "M",
 		BirthDate: AsTime("1990-01-01"),
 		HireDate:  AsTime("2001-01-01"),
-	}, time.Now().Add(24*time.Hour*365*-1), model.EndOfTime)
+	}, time.Now().Add(24*time.Hour*365*-1), bitemporal.EndOfTime)
 	if err != nil {
 		log.Fatalln(err)
 	}

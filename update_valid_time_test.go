@@ -1,14 +1,13 @@
-package model
+package bitemporal
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
-	"text/template"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/olekukonko/tablewriter"
@@ -50,13 +49,6 @@ INSERT INTO salaries VALUES
     (106,10009,94409,'2002-02-14',DATETIME('9999-12-31 23:59:59'),'2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59'))
 `
 
-type model struct {
-	EmpNo     int64
-	Salary    int64
-	ValidFrom string
-	ValidTo   string
-}
-
 type SalaryRow struct {
 	EmpNo           int64
 	Salary          int64
@@ -64,129 +56,6 @@ type SalaryRow struct {
 	ValidTo         string
 	TransactionFrom string
 	TransactionTo   string
-}
-
-var updateTempl = `
--- Before segment: only create if there's actual time before updateStart
-select emp_no,
-       salary,
-       DATETIME(valid_from),
-       DATETIME('{{ .ValidFrom }}')           valid_to,
-       DATETIME(current_timestamp)      transaction_from,
-       DATETIME('9999-12-31 23:59:59') transaction_to
-from salaries
-where emp_no = {{ .EmpNo }}
-  AND valid_from < DATETIME('{{ .ValidFrom }}')
-  AND valid_to > DATETIME('{{ .ValidFrom }}')
-  AND DATETIME(valid_from) < DATETIME('{{ .ValidFrom }}')  -- Ensure non-zero duration
-  AND transaction_from <= current_timestamp
-  AND transaction_to >= current_timestamp
-UNION ALL
--- Update segment: the new salary for the update window
-select emp_no,
-       {{ .Salary }}                      salary,
-       DATETIME(case
-           when valid_from < DATETIME('{{ .ValidFrom }}')
-               then DATETIME('{{ .ValidFrom }}')
-           else valid_from end) valid_from,
-       DATETIME(case
-           when valid_to >= DATETIME('{{ .ValidTo }}')
-               then DATETIME('{{ .ValidTo }}')
-           else valid_to end)   valid_to,
-       DATETIME(current_timestamp)       transaction_from,
-       DATETIME('9999-12-31 23:59:59')   transaction_to
-FROM salaries
-where emp_no = {{ .EmpNo }}
-  AND valid_from < DATETIME('{{ .ValidTo }}')
-  AND valid_to > DATETIME('{{ .ValidFrom }}')
-  AND transaction_from <= current_timestamp
-  AND transaction_to >= current_timestamp
-  -- Ensure the calculated period has positive duration
-  AND DATETIME(case when valid_from < DATETIME('{{ .ValidFrom }}') then DATETIME('{{ .ValidFrom }}') else valid_from end) 
-      < DATETIME(case when valid_to >= DATETIME('{{ .ValidTo }}') then DATETIME('{{ .ValidTo }}') else valid_to end)
-UNION ALL
--- After segment: preserve portions of records that extend beyond updateEnd
--- Only for records that START BEFORE updateEnd but extend beyond it
-select emp_no,
-       salary,
-       DATETIME('{{ .ValidTo }}')           valid_from,
-       DATETIME(valid_to),
-       DATETIME(current_timestamp)      transaction_from,
-       DATETIME('9999-12-31 23:59:59') transaction_to
-from salaries
-where emp_no = {{ .EmpNo }}
-  AND valid_from < DATETIME('{{ .ValidTo }}')    -- Must start BEFORE updateEnd
-  AND valid_to > DATETIME('{{ .ValidTo }}')      -- Must end AFTER updateEnd  
-  AND DATETIME('{{ .ValidTo }}') < DATETIME(valid_to)  -- Ensure positive duration
-  -- Explicit exclusion: do not include records that start exactly at updateEnd
-  AND DATETIME(valid_from) != DATETIME('{{ .ValidTo }}')
-  AND transaction_from <= current_timestamp
-  AND transaction_to >= current_timestamp
-UNION ALL
--- New period segment: create new record when update window has no overlap with existing data
--- This handles cases where the update is entirely before or after existing data
-SELECT {{ .EmpNo }} as emp_no,
-       {{ .Salary }} as salary,
-       DATETIME('{{ .ValidFrom }}') as valid_from,
-       DATETIME('{{ .ValidTo }}') as valid_to,
-       DATETIME(current_timestamp) as transaction_from,
-       DATETIME('9999-12-31 23:59:59') as transaction_to
-WHERE NOT EXISTS (
-    SELECT 1 FROM salaries 
-    WHERE emp_no = {{ .EmpNo }}
-      AND valid_from < DATETIME('{{ .ValidTo }}')
-      AND valid_to > DATETIME('{{ .ValidFrom }}')
-      AND transaction_from <= current_timestamp
-      AND transaction_to >= current_timestamp
-)
-UNION ALL
--- Extension segment: create record for portion of update window before earliest existing data
-SELECT {{ .EmpNo }} as emp_no,
-       {{ .Salary }} as salary,
-       DATETIME('{{ .ValidFrom }}') as valid_from,
-       (SELECT MIN(DATETIME(valid_from)) FROM salaries 
-        WHERE emp_no = {{ .EmpNo }}
-          AND transaction_from <= current_timestamp 
-          AND transaction_to >= current_timestamp) as valid_to,
-       DATETIME(current_timestamp) as transaction_from,
-       DATETIME('9999-12-31 23:59:59') as transaction_to
-WHERE DATETIME('{{ .ValidFrom }}') < (
-    SELECT MIN(valid_from) FROM salaries 
-    WHERE emp_no = {{ .EmpNo }}
-      AND transaction_from <= current_timestamp 
-      AND transaction_to >= current_timestamp
-)
-AND EXISTS (
-    SELECT 1 FROM salaries 
-    WHERE emp_no = {{ .EmpNo }}
-      AND valid_from < DATETIME('{{ .ValidTo }}')
-      AND valid_to > DATETIME('{{ .ValidFrom }}')
-      AND transaction_from <= current_timestamp
-      AND transaction_to >= current_timestamp
-)
-ORDER BY valid_from;
-`
-
-func updateWindowQuery(empNo int64, salary int64, validFrom, validTo string) string {
-	m := model{
-		EmpNo:     empNo,
-		Salary:    salary,
-		ValidFrom: validFrom,
-		ValidTo:   validTo,
-	}
-
-	tmpl, err := template.New("update").Parse(updateTempl)
-	if err != nil {
-		panic(err)
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, m)
-	if err != nil {
-		panic(err)
-	}
-
-	return buf.String()
 }
 
 func highlight(validTo string, validFrom string, salary int64, str string) string {
@@ -238,8 +107,28 @@ func printTable(salary int64, validFrom string, validTo string, rows []SalaryRow
 }
 
 func getUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validFrom, validTo string) []SalaryRow {
-	var query = updateWindowQuery(empNo, salary, validFrom, validTo)
-	rows, err := db.Query(query)
+	validToT, err := time.Parse(time.DateOnly, validTo)
+	if err != nil {
+		t.Error(err)
+	}
+	validFromT, err := time.Parse(time.DateOnly, validFrom)
+	if err != nil {
+		t.Error(err)
+	}
+
+	frag, err := CreatePeriodsQuery(UpdateWindow{
+		Table:     "salaries",
+		Columns:   []string{"emp_no", "salary"},
+		Filters:   []string{"emp_no"},
+		ValidFrom: validFromT,
+		ValidTo:   validToT,
+		Values:    map[string]interface{}{"emp_no": empNo, "salary": salary},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	rows, err := db.Query(frag.Query, frag.Args()...)
 	if err != nil {
 		t.Fatalf("Failed to execute query: %v", err)
 	}
@@ -388,22 +277,22 @@ func TestUpdateStartOnExistingPeriodBoundary(t *testing.T) {
 	db, cleanup := createTestDB(t)
 	defer cleanup()
 
-	// updateStart is 1986-02-18, which is an existing period boundary (end of one period, start of next)
-	updateStart := "1986-02-18"
-	updateEnd := "1990-01-01"
+	// validFrom is 1986-02-18, which is an existing period boundary (end of one period, start of next)
+	validFrom := "1986-02-18"
+	validTo := "1990-01-01"
 
-	rows := getUpdateWindow(t, db, 10009, 42, updateStart, updateEnd)
+	rows := getUpdateWindow(t, db, 10009, 42, validFrom, validTo)
 
-	// Verify that no row should end exactly at updateStart since it's already a boundary
+	// Verify that no row should end exactly at validFrom since it's already a boundary
 	for _, row := range rows {
-		if row.ValidTo == updateStart+" 00:00:00" {
-			t.Errorf("Found row ending at existing boundary %s, which shouldn't happen", updateStart)
+		if row.ValidTo == validFrom+" 00:00:00" {
+			t.Errorf("Found row ending at existing boundary %s, which shouldn't happen", validFrom)
 		}
 	}
 
 	// Verify rows within the update window have the new salary
 	for _, row := range rows {
-		if row.ValidFrom >= updateStart+" 00:00:00" && row.ValidTo <= updateEnd+" 00:00:00" {
+		if row.ValidFrom >= validFrom+" 00:00:00" && row.ValidTo <= validTo+" 00:00:00" {
 			if row.Salary != 42 {
 				t.Errorf("Expected salary 42 for row with ValidFrom=%s ValidTo=%s, got %d",
 					row.ValidFrom, row.ValidTo, row.Salary)
