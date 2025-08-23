@@ -1,14 +1,16 @@
-package bitemporal
+package model
 
 import (
 	"context"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/pborges/bitemporal"
 )
 
 func init() {
-	schema = append(schema, Table{
+	bitemporal.Schema = append(bitemporal.Schema, bitemporal.Table{
 		Name: "employees",
 		Columns: []string{
 			"emp_no",
@@ -28,7 +30,7 @@ type Employee struct {
 	LastName  string    `json:"last_name"`
 	Gender    string    `json:"gender"`
 	HireDate  time.Time `json:"hire_date"`
-	BitemporalEntity
+	bitemporal.BitemporalEntity
 }
 
 func (e Employee) String() string {
@@ -36,14 +38,14 @@ func (e Employee) String() string {
 		e.EmpNo, e.FirstName, e.LastName, e.Gender, e.HireDate.Format("2006-01-02"))
 }
 
-func NewEmployeeRepository(repo *Repository) *EmployeeRepository {
+func NewEmployeeRepository(repo *bitemporal.Repository) *EmployeeRepository {
 	return &EmployeeRepository{
 		repo: repo,
 	}
 }
 
 type EmployeeRepository struct {
-	repo *Repository
+	repo *bitemporal.Repository
 }
 
 func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, error) {

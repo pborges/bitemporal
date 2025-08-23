@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pborges/bitemporal"
+	"github.com/pborges/bitemporal/model"
 )
 
 func AsTime(s string) time.Time {
@@ -39,15 +40,15 @@ func main() {
 	}
 	defer repo.Close()
 
-	employeesRepo := bitemporal.NewEmployeeRepository(repo)
-	salariesRepo := bitemporal.NewSalaryRepository(repo)
+	employeesRepo := model.NewEmployeeRepository(repo)
+	salariesRepo := model.NewSalaryRepository(repo)
 
-	dump(employeesRepo, salariesRepo, 1001, time.Now())
-	dump(employeesRepo, salariesRepo, 1001, AsTime("1993-02-17"))
+	dump(employeesRepo, salariesRepo, 10009, time.Now())
+	dump(employeesRepo, salariesRepo, 10009, AsTime("1993-02-17"))
 
 	fmt.Println("All Salaries")
 	ctx := bitemporal.WithValidTime(context.Background(), time.Time{})
-	salaries, err := salariesRepo.ForEmployee(ctx, 1001)
+	salaries, err := salariesRepo.ForEmployee(ctx, 10009)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -57,7 +58,7 @@ func main() {
 
 }
 
-func dump(employeesRepo *bitemporal.EmployeeRepository, salariesRepo *bitemporal.SalaryRepository, empNo int64, t time.Time) {
+func dump(employeesRepo *model.EmployeeRepository, salariesRepo *model.SalaryRepository, empNo int64, t time.Time) {
 	fmt.Println("* DUMPING AS OF: ", t.Format(time.DateTime))
 	ctx := bitemporal.InitializeContext(context.Background())
 	ctx = bitemporal.WithValidTime(ctx, t)

@@ -1,12 +1,14 @@
-package bitemporal
+package model
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/pborges/bitemporal"
 )
 
 func init() {
-	schema = append(schema, Table{
+	bitemporal.Schema = append(bitemporal.Schema, bitemporal.Table{
 		Name: "titles",
 		Columns: []string{
 			"emp_no",
@@ -18,21 +20,21 @@ func init() {
 type Title struct {
 	EmpNo int64  `json:"emp_no"`
 	Title string `json:"title"`
-	BitemporalEntity
+	bitemporal.BitemporalEntity
 }
 
 func (t Title) String() string {
 	return fmt.Sprintf("Title{EmpNo: %d, Title: %s}", t.EmpNo, t.Title)
 }
 
-func NewTitleRepository(repo *Repository) *TitleRepository {
+func NewTitleRepository(repo *bitemporal.Repository) *TitleRepository {
 	return &TitleRepository{
 		repo: repo,
 	}
 }
 
 type TitleRepository struct {
-	repo *Repository
+	repo *bitemporal.Repository
 }
 
 func (r TitleRepository) ForEmployee(ctx context.Context, empNo int64) ([]Title, error) {

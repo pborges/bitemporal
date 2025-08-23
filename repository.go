@@ -18,7 +18,7 @@ var pragmas = []string{
 	"PRAGMA locking_mode = EXCLUSIVE",
 }
 
-var schema []Table
+var Schema []Table
 
 type Table struct {
 	Name    string
@@ -41,7 +41,7 @@ func NewRepository(db string) (*Repository, error) {
 		}
 	}
 
-	return &Repository{database, schema}, nil
+	return &Repository{database, Schema}, nil
 }
 
 type Repository struct {

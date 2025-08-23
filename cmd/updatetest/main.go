@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pborges/bitemporal"
+	"github.com/pborges/bitemporal/model"
 )
 
 func AsTime(s string) time.Time {
@@ -37,9 +38,9 @@ func main() {
 	}
 	defer repo.Close()
 
-	employeesRepo := bitemporal.NewEmployeeRepository(repo)
+	employeesRepo := model.NewEmployeeRepository(repo)
 
-	err = employeesRepo.Save(bitemporal.Employee{
+	err = employeesRepo.Save(model.Employee{
 		EmpNo:     100,
 		FirstName: "John",
 		LastName:  "Smith",
@@ -51,7 +52,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	err = employeesRepo.Save(bitemporal.Employee{
+	err = employeesRepo.Save(model.Employee{
 		EmpNo:     100,
 		FirstName: "John",
 		LastName:  "Smythe",
