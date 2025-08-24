@@ -3,33 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pborges/bitemporal"
 	"github.com/pborges/bitemporal/model"
 )
-
-func AsTime(s string) time.Time {
-	layout := time.DateTime
-	if !strings.Contains(s, " ") {
-		layout = time.DateOnly
-	}
-
-	t, err := time.Parse(layout, strings.TrimSpace(s))
-	if err != nil {
-		panic(err)
-	}
-	if t.IsZero() {
-		panic(errors.New("time is zero"))
-	}
-	return t
-}
 
 // This file is just a scratch pad for now
 func main() {
@@ -51,7 +33,7 @@ func main() {
 	salariesRepo := model.NewSalaryRepository(db)
 
 	dump(employeesRepo, salariesRepo, 10009, time.Now())
-	dump(employeesRepo, salariesRepo, 10009, AsTime("1993-02-17"))
+	dump(employeesRepo, salariesRepo, 10009, bitemporal.AsTime("1993-02-17"))
 
 	fmt.Println("All Salaries")
 	ctx := bitemporal.WithValidTime(context.Background(), time.Time{})

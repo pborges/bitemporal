@@ -48,22 +48,11 @@ func createTemporalTestDB(t *testing.T) (*bitemporal.TemporalDB, *model.Employee
 	}
 }
 
-func queryEmployeeAtTime(t *testing.T, repo *model.EmployeeRepository, empNo int64, validTime, transactionTime string) model.Employee {
-	// Parse the time strings
-	validTimeT, err := time.Parse("2006-01-02", validTime)
-	if err != nil {
-		t.Fatalf("Failed to parse valid time: %v", err)
-	}
-
-	transactionTimeT, err := time.Parse("2006-01-02 15:04:05", transactionTime)
-	if err != nil {
-		t.Fatalf("Failed to parse transaction time: %v", err)
-	}
-
+func queryEmployeeAtTime(t *testing.T, repo *model.EmployeeRepository, empNo int64, validTime, transactionTime time.Time) model.Employee {
 	// Create context with temporal moments
 	ctx := context.Background()
-	ctx = bitemporal.WithValidTime(ctx, validTimeT)
-	ctx = bitemporal.WithSystemMoment(ctx, transactionTimeT)
+	ctx = bitemporal.WithValidTime(ctx, validTime)
+	ctx = bitemporal.WithSystemMoment(ctx, transactionTime)
 
 	// Query using the repository
 	employee, err := repo.ById(ctx, empNo)
@@ -89,7 +78,7 @@ func TestNameChangeAtSpecificTime(t *testing.T) {
 	// Test: What was Jane's name on 2023-06-16 according to what we knew on 2023-07-05?
 	// On 2023-07-05, HR had recorded marriage starting 2023-06-15
 	// So on 2023-06-16 (after marriage date), she was Johnson
-	employee := queryEmployeeAtTime(t, repo, 12345, "2023-06-16", "2023-07-05 23:59:59")
+	employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime("2023-06-16"), bitemporal.AsTime("2023-07-05 23:59:59"))
 
 	if employee.LastName != "Johnson" {
 		t.Errorf("Expected last name 'Johnson' (after recorded marriage date), got '%s'", employee.LastName)
@@ -106,7 +95,7 @@ func TestNameChangeBeforeCorrectionKnowledge(t *testing.T) {
 	// Test: What was Jane's name on 2023-06-12 according to what we knew on 2023-06-20?
 	// At this time, HR had recorded marriage starting 2023-06-15, correction not made yet
 	// So on 2023-06-12 (before the recorded marriage date), she was still Smith
-	employee := queryEmployeeAtTime(t, repo, 12345, "2023-06-12", "2023-06-20 23:59:59")
+	employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime("2023-06-12"), bitemporal.AsTime("2023-06-20 23:59:59"))
 
 	if employee.LastName != "Smith" {
 		t.Errorf("Expected last name 'Smith' (before recorded marriage date), got '%s'", employee.LastName)
@@ -119,8 +108,7 @@ func TestNameChangeAfterCorrection(t *testing.T) {
 
 	// Test: What was Jane's name on 2023-06-12 according to current knowledge?
 	// After correction: marriage was actually on 2023-06-10, so on 2023-06-12 she was Johnson
-	now := time.Now().Format("2006-01-02 15:04:05")
-	employee := queryEmployeeAtTime(t, repo, 12345, "2023-06-12", now)
+	employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime("2023-06-12"), time.Now())
 
 	if employee.LastName != "Johnson" {
 		t.Errorf("Expected last name 'Johnson' (corrected marriage was 2023-06-10), got '%s'", employee.LastName)
@@ -132,8 +120,7 @@ func TestNameOnActualMarriageDate(t *testing.T) {
 	defer cleanup()
 
 	// Test: What was Jane's name on the actual marriage date (2023-06-10) with current knowledge?
-	now := time.Now().Format("2006-01-02 15:04:05")
-	employee := queryEmployeeAtTime(t, repo, 12345, "2023-06-10", now)
+	employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime("2023-06-10"), time.Now())
 
 	if employee.LastName != "Johnson" {
 		t.Errorf("Expected last name 'Johnson' on marriage date, got '%s'", employee.LastName)
@@ -145,8 +132,7 @@ func TestNameBeforeMarriage(t *testing.T) {
 	defer cleanup()
 
 	// Test: What was Jane's name before marriage (2023-06-09) with current knowledge?
-	now := time.Now().Format("2006-01-02 15:04:05")
-	employee := queryEmployeeAtTime(t, repo, 12345, "2023-06-09", now)
+	employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime("2023-06-09"), time.Now())
 
 	if employee.LastName != "Smith" {
 		t.Errorf("Expected last name 'Smith' before marriage, got '%s'", employee.LastName)
@@ -235,13 +221,13 @@ func TestTransactionTimeProgression(t *testing.T) {
 			validTime:       "2023-06-12",
 			transactionTime: "2023-08-20 12:00:00",
 			expectedName:    "Johnson",
-			description:     "HR corrected the marriage date to 2023-06-10, so June 12 shows Johnson",
+			description:     "HR corrected the marriage date to 2023-06-10, so 2023-06-12 shows Johnson",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			employee := queryEmployeeAtTime(t, repo, 12345, tc.validTime, tc.transactionTime)
+			employee := queryEmployeeAtTime(t, repo, 12345, bitemporal.AsTime(tc.validTime), bitemporal.AsTime(tc.transactionTime))
 
 			if employee.LastName != tc.expectedName {
 				t.Errorf("Expected last name '%s' (%s), got '%s'",
