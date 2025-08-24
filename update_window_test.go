@@ -50,6 +50,8 @@ func getSalariesUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64
 		t.Error(err)
 	}
 
+	fmt.Println(frag.Query)
+
 	rows, err := db.Query(frag.Query, frag.Args()...)
 	if err != nil {
 		t.Fatalf("Failed to execute query: %v", err)

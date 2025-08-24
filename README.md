@@ -67,3 +67,7 @@ The `employees` table includes:
 ## State
 
 - Very early, most work being done in tests at the moment.
+
+## Preserving History
+
+![Preserving History](docs/preserving-history.png)

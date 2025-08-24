@@ -19,6 +19,9 @@ var (
 	testDbDir  = "test_db-1.0.7"
 )
 
+var DbEpoch = bitemporal.AsTime("1950-01-01 01:00:00")
+var EndOfTime = bitemporal.AsTime("9999-12-31 23:59:59")
+
 func main() {
 	os.Remove(dbPath)
 
@@ -103,7 +106,7 @@ func importEmployees(db *sql.DB) error {
 	// Prepare the insert statement
 	stmt, err := tx.Prepare(`
 		INSERT INTO employees (emp_no, first_name, last_name, hire_date, birth_date, gender, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, ?, ?, ?, ?, ?, '9999-12-31 23:59:59', ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -127,14 +130,14 @@ func importEmployees(db *sql.DB) error {
 			}
 
 			empNo := match[1]
-			birthDate := bitemporal.AsTime(match[2])
+			birthDate := match[2]
 			firstName := match[3]
 			lastName := match[4]
 			gender := match[5]
-			hireDate := bitemporal.AsTime(match[6])
+			hireDate := match[6]
 
 			// For bitemporal, we set valid_from to hire_date and transaction_time to now
-			_, err := stmt.Exec(empNo, firstName, lastName, hireDate, birthDate, gender, hireDate, now)
+			_, err := stmt.Exec(empNo, firstName, lastName, bitemporal.AsTime(hireDate), bitemporal.AsTime(birthDate), gender, bitemporal.AsTime(hireDate), EndOfTime, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting employee %s: %v", empNo, err)
 				continue
@@ -169,7 +172,7 @@ func importDepartments(db *sql.DB) error {
 
 	stmt, err := tx.Prepare(`
 		INSERT INTO departments (dept_no, dept_name, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, '1985-01-01', '9999-12-31 23:59:59', ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -192,7 +195,7 @@ func importDepartments(db *sql.DB) error {
 			deptNo := match[1]
 			deptName := match[2]
 
-			_, err := stmt.Exec(deptNo, deptName, now)
+			_, err := stmt.Exec(deptNo, deptName, now, DbEpoch, EndOfTime, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting department %s: %v", deptNo, err)
 				continue
@@ -220,7 +223,7 @@ func importDeptEmp(db *sql.DB) error {
 
 	stmt, err := db.Prepare(`
 		INSERT INTO dept_emp (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -243,14 +246,16 @@ func importDeptEmp(db *sql.DB) error {
 			empNo := match[1]
 			deptNo := match[2]
 			fromDate := match[3]
-			toDate := match[4]
+			var toDate any = match[4]
 
 			// Convert 9999-01-01 to our end-of-time format
 			if toDate == "9999-01-01" {
-				toDate = "9999-12-31 23:59:59"
+				toDate = EndOfTime
+			} else {
+				toDate = bitemporal.AsTime(toDate.(string))
 			}
 
-			_, err := stmt.Exec(empNo, deptNo, fromDate, toDate, now)
+			_, err := stmt.Exec(empNo, deptNo, bitemporal.AsTime(fromDate), toDate, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting dept_emp %s-%s: %v", empNo, deptNo, err)
 				continue
@@ -273,7 +278,7 @@ func importDeptManager(db *sql.DB) error {
 
 	stmt, err := db.Prepare(`
 		INSERT INTO dept_manager (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -296,13 +301,15 @@ func importDeptManager(db *sql.DB) error {
 			empNo := match[1]
 			deptNo := match[2]
 			fromDate := match[3]
-			toDate := match[4]
+			var toDate any = match[4]
 
 			if toDate == "9999-01-01" {
-				toDate = "9999-12-31 23:59:59"
+				toDate = EndOfTime
+			} else {
+				toDate = bitemporal.AsTime(toDate.(string))
 			}
 
-			_, err := stmt.Exec(empNo, deptNo, fromDate, toDate, now)
+			_, err := stmt.Exec(empNo, deptNo, bitemporal.AsTime(fromDate), toDate, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting dept_manager %s-%s: %v", empNo, deptNo, err)
 				continue
@@ -325,7 +332,7 @@ func importTitles(db *sql.DB) error {
 
 	stmt, err := db.Prepare(`
 		INSERT INTO titles (emp_no, title, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -348,13 +355,15 @@ func importTitles(db *sql.DB) error {
 			empNo := match[1]
 			title := match[2]
 			fromDate := match[3]
-			toDate := match[4]
+			var toDate any = match[4]
 
 			if toDate == "9999-01-01" {
-				toDate = "9999-12-31 23:59:59"
+				toDate = EndOfTime
+			} else {
+				toDate = bitemporal.AsTime(toDate.(string))
 			}
 
-			_, err := stmt.Exec(empNo, title, fromDate, toDate, now)
+			_, err := stmt.Exec(empNo, title, bitemporal.AsTime(fromDate), toDate, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting title %s-%s: %v", empNo, title, err)
 				continue
@@ -377,7 +386,7 @@ func importSalaries(db *sql.DB) error {
 
 	stmt, err := db.Prepare(`
 		INSERT INTO salaries (emp_no, salary, valid_from, valid_to, transaction_from, transaction_to)
-		VALUES (?, ?, ?, ?, ?, '9999-12-31 23:59:59')
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -408,13 +417,15 @@ func importSalaries(db *sql.DB) error {
 				empNo := match[1]
 				salary := match[2]
 				fromDate := match[3]
-				toDate := match[4]
+				var toDate any = match[4]
 
 				if toDate == "9999-01-01" {
-					toDate = "9999-12-31 23:59:59"
+					toDate = EndOfTime
+				} else {
+					toDate = bitemporal.AsTime(toDate.(string))
 				}
 
-				_, err := stmt.Exec(empNo, salary, fromDate, toDate, now)
+				_, err := stmt.Exec(empNo, salary, bitemporal.AsTime(fromDate), toDate, now, EndOfTime)
 				if err != nil {
 					log.Printf("Error inserting salary %s: %v", empNo, err)
 					continue
