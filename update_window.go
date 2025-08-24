@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	_ "embed"
+	"fmt"
 	"strings"
 	"text/template"
 	"time"
@@ -26,32 +27,31 @@ func (q QueryFragment) Args() []any {
 }
 
 type UpdateWindow struct {
-	Table   string
-	Columns []string
-	Filters []string
+	Table    string
+	Select   []string
+	FilterBy []string
+	Values   map[string]any
 
 	ValidFrom time.Time
 	ValidTo   time.Time
-
-	Values map[string]any
 }
 
 func (w UpdateWindow) ColumnsString() string {
-	return strings.Join(w.Columns, ", ")
+	return strings.Join(w.Select, ", ")
 }
 
 func (w UpdateWindow) ColumnParamsString() string {
-	params := make([]string, len(w.Columns))
-	for i := range w.Columns {
-		params[i] = "@" + w.Columns[i] + " as " + w.Columns[i]
+	params := make([]string, len(w.Select))
+	for i := range w.Select {
+		params[i] = "@" + w.Select[i] + " as " + w.Select[i]
 	}
 	return strings.Join(params, ", ")
 }
 
 func (w UpdateWindow) FiltersString() string {
-	filters := make([]string, len(w.Filters))
-	for i := range w.Filters {
-		filters[i] = w.Filters[i] + " = @" + w.Filters[i]
+	filters := make([]string, len(w.FilterBy))
+	for i := range w.FilterBy {
+		filters[i] = w.FilterBy[i] + " = @" + w.FilterBy[i]
 	}
 	return strings.Join(filters, " AND ")
 }
@@ -67,8 +67,12 @@ func CreatePeriodsQuery(window UpdateWindow) (QueryFragment, error) {
 		sql.Named("valid_to", window.ValidTo),
 	}
 
-	for i := range window.Columns {
-		args = append(args, sql.Named(window.Columns[i], window.Values[window.Columns[i]]))
+	for i := range window.Select {
+		val, ok := window.Values[window.Select[i]]
+		if !ok {
+			return QueryFragment{}, fmt.Errorf("value not found for column %q", window.Select[i])
+		}
+		args = append(args, sql.Named(window.Select[i], val))
 	}
 
 	var buf bytes.Buffer

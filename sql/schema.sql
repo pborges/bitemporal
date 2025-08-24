@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS employees
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
+-- Indexes for bitemporal queries
+CREATE INDEX IF NOT EXISTS idx_employees_bitemporal ON employees (emp_no, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_employees_transaction ON employees (emp_no, transaction_from, transaction_to);
 
 -- Departments table with bitemporal fields
 CREATE TABLE IF NOT EXISTS departments
@@ -27,6 +30,9 @@ CREATE TABLE IF NOT EXISTS departments
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
+-- Indexes for bitemporal queries
+CREATE INDEX IF NOT EXISTS idx_departments_bitemporal ON departments (dept_no, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_departments_transaction ON departments (dept_no, transaction_from, transaction_to);
 
 -- Department managers with bitemporal fields
 CREATE TABLE IF NOT EXISTS dept_manager
@@ -40,6 +46,9 @@ CREATE TABLE IF NOT EXISTS dept_manager
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
+-- Indexes for bitemporal queries
+CREATE INDEX IF NOT EXISTS idx_dept_manager_bitemporal ON dept_manager (emp_no, dept_no, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_dept_manager_transaction ON dept_manager (emp_no, dept_no, transaction_from, transaction_to);
 
 -- Department employees with bitemporal fields
 CREATE TABLE IF NOT EXISTS dept_emp
@@ -53,6 +62,9 @@ CREATE TABLE IF NOT EXISTS dept_emp
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
+-- Indexes for bitemporal queries
+CREATE INDEX IF NOT EXISTS idx_dept_emp_bitemporal ON dept_emp (emp_no, dept_no, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_dept_emp_transaction ON dept_emp (emp_no, dept_no, transaction_from, transaction_to);
 
 -- Titles with bitemporal fields
 CREATE TABLE IF NOT EXISTS titles
@@ -66,6 +78,9 @@ CREATE TABLE IF NOT EXISTS titles
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
+-- Indexes for bitemporal queries
+CREATE INDEX IF NOT EXISTS idx_titles_bitemporal ON titles (emp_no, valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_titles_transaction ON titles (emp_no, transaction_from, transaction_to);
 
 -- Salaries with bitemporal fields
 CREATE TABLE IF NOT EXISTS salaries
@@ -79,22 +94,6 @@ CREATE TABLE IF NOT EXISTS salaries
     transaction_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     transaction_to   DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59'
 );
-
 -- Indexes for bitemporal queries
-CREATE INDEX IF NOT EXISTS idx_employees_bitemporal ON employees (emp_no, valid_from, valid_to);
-CREATE INDEX IF NOT EXISTS idx_employees_transaction ON employees (emp_no, transaction_from, transaction_to);
-
-CREATE INDEX IF NOT EXISTS idx_departments_bitemporal ON departments (dept_no, valid_from, valid_to);
-CREATE INDEX IF NOT EXISTS idx_departments_transaction ON departments (dept_no, transaction_from, transaction_to);
-
-CREATE INDEX IF NOT EXISTS idx_dept_manager_bitemporal ON dept_manager (emp_no, dept_no, valid_from, valid_to);
-CREATE INDEX IF NOT EXISTS idx_dept_manager_transaction ON dept_manager (emp_no, dept_no, transaction_from, transaction_to);
-
-CREATE INDEX IF NOT EXISTS idx_dept_emp_bitemporal ON dept_emp (emp_no, dept_no, valid_from, valid_to);
-CREATE INDEX IF NOT EXISTS idx_dept_emp_transaction ON dept_emp (emp_no, dept_no, transaction_from, transaction_to);
-
-CREATE INDEX IF NOT EXISTS idx_titles_bitemporal ON titles (emp_no, valid_from, valid_to);
-CREATE INDEX IF NOT EXISTS idx_titles_transaction ON titles (emp_no, transaction_from, transaction_to);
-
 CREATE INDEX IF NOT EXISTS idx_salaries_bitemporal ON salaries (emp_no, valid_from, valid_to);
 CREATE INDEX IF NOT EXISTS idx_salaries_transaction ON salaries (emp_no, transaction_from, transaction_to);

@@ -2,52 +2,17 @@ package bitemporal
 
 import (
 	"database/sql"
-	"fmt"
-	"os"
-	"strconv"
-	"strings"
+	_ "embed"
 	"testing"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/olekukonko/tablewriter"
-	"github.com/olekukonko/tablewriter/tw"
 )
 
 const debug = true
 
-var tempDataQuery = `
-DROP TABLE IF EXISTS salaries;
-CREATE TABLE salaries (
-    row_id INTEGER,
-    emp_no INTEGER,
-    salary INTEGER,
-    valid_from DATETIME,
-    valid_to DATETIME,
-    transaction_from DATETIME,
-    transaction_to DATETIME
-);
-
-INSERT INTO salaries VALUES
-    (89,10009,60929,'1985-02-18','1986-02-18','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (90,10009,64604,'1986-02-18','1987-02-18','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (91,10009,64780,'1987-02-18','1988-02-18','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (92,10009,66302,'1988-02-18','1989-02-17','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (93,10009,69042,'1989-02-17','1990-02-17','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (94,10009,70889,'1990-02-17','1991-02-17','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (95,10009,71434,'1991-02-17','1992-02-17','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (96,10009,74612,'1992-02-17','1993-02-16','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (97,10009,76518,'1993-02-16','1994-02-16','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (98,10009,78335,'1994-02-16','1995-02-16','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (99,10009,80944,'1995-02-16','1996-02-16','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (100,10009,82507,'1996-02-16','1997-02-15','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (101,10009,85875,'1997-02-15','1998-02-15','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (102,10009,89324,'1998-02-15','1999-02-15','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (103,10009,90668,'1999-02-15','2000-02-15','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (104,10009,93507,'2000-02-15','2001-02-14','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (105,10009,94443,'2001-02-14','2002-02-14','2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59')),
-    (106,10009,94409,'2002-02-14',DATETIME('9999-12-31 23:59:59'),'2025-08-23 08:55:49.371425-07:00',DATETIME('9999-12-31 23:59:59'))
-`
+//go:embed sql/test_data.sql
+var tempDataQuery string
 
 type SalaryRow struct {
 	EmpNo           int64
@@ -58,55 +23,7 @@ type SalaryRow struct {
 	TransactionTo   string
 }
 
-func highlight(validTo string, validFrom string, salary int64, str string) string {
-	if validTo != "" && strings.HasPrefix(str, validTo) {
-		return fmt.Sprintf("\033[31m%s\033[0m", str)
-	}
-	if validFrom != "" && strings.HasPrefix(str, validFrom) {
-		return fmt.Sprintf("\033[32m%s\033[0m", str)
-	}
-	if salary > 0 && str == strconv.Itoa(int(salary)) {
-		return fmt.Sprintf("\033[34m%s\033[0m", str)
-	}
-	return str
-}
-
-func printTable(salary int64, validFrom string, validTo string, rows []SalaryRow) {
-	zeroValues := salary == 0 && validFrom == "" && validTo == ""
-	table := tablewriter.NewTable(os.Stdout,
-		tablewriter.WithConfig(tablewriter.Config{
-			Footer: tw.CellConfig{
-				Formatting: tw.CellFormatting{MergeMode: tw.MergeHorizontal},
-				Alignment:  tw.CellAlignment{Global: tw.AlignLeft},
-			},
-		}),
-	)
-	table.Header([]string{"EmpNo", "Salary", "ValidFrom", "ValidTo", "TransactionFrom", "TransactionTo"})
-	footer := fmt.Sprintf("Salary: %s\nFrom  : %s\nTo    : %s",
-		highlight(validTo, validFrom, salary, strconv.Itoa(int(salary))),
-		highlight(validTo, validFrom, salary, validFrom),
-		highlight(validTo, validFrom, salary, validTo),
-	)
-
-	if !zeroValues {
-		table.Footer(footer, footer, footer, footer, footer, footer)
-	}
-
-	for _, row := range rows {
-		table.Append([]string{
-			fmt.Sprintf("%d", row.EmpNo),
-			highlight(validTo, validFrom, salary, strconv.Itoa(int(row.Salary))),
-			highlight(validTo, validFrom, row.Salary, row.ValidFrom),
-			highlight(validTo, validFrom, row.Salary, row.ValidTo),
-			row.TransactionFrom,
-			row.TransactionTo,
-		})
-	}
-
-	table.Render()
-}
-
-func getUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validFrom, validTo string) []SalaryRow {
+func getSalariesUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validFrom, validTo string) []SalaryRow {
 	validToT, err := time.Parse(time.DateOnly, validTo)
 	if err != nil {
 		t.Error(err)
@@ -118,8 +35,8 @@ func getUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validF
 
 	frag, err := CreatePeriodsQuery(UpdateWindow{
 		Table:     "salaries",
-		Columns:   []string{"emp_no", "salary"},
-		Filters:   []string{"emp_no"},
+		Select:    []string{"emp_no", "salary"},
+		FilterBy:  []string{"emp_no"},
 		ValidFrom: validFromT,
 		ValidTo:   validToT,
 		Values:    map[string]interface{}{"emp_no": empNo, "salary": salary},
@@ -144,7 +61,7 @@ func getUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64, validF
 		salaryRows = append(salaryRows, row)
 	}
 	if debug {
-		printTable(salary, validFrom, validTo, salaryRows)
+		PrintTable(salary, validFrom, validTo, salaryRows)
 	}
 	return salaryRows
 }
@@ -161,36 +78,6 @@ func createTestDB(t *testing.T) (*sql.DB, func()) {
 	}
 	return db, func() {
 		db.Close()
-	}
-}
-
-func TestCreateTestDB(t *testing.T) {
-	db, cleanup := createTestDB(t)
-	defer cleanup()
-
-	rows, err := db.Query("SELECT emp_no, salary, valid_from, valid_to, transaction_from, transaction_to FROM salaries ORDER BY valid_from")
-	if err != nil {
-		t.Fatalf("Failed to query salaries: %v", err)
-	}
-	defer rows.Close()
-
-	var salaryRows []SalaryRow
-	for rows.Next() {
-		var row SalaryRow
-		err = rows.Scan(&row.EmpNo, &row.Salary, &row.ValidFrom, &row.ValidTo, &row.TransactionFrom, &row.TransactionTo)
-		if err != nil {
-			t.Fatalf("Failed to scan row: %v", err)
-		}
-		salaryRows = append(salaryRows, row)
-	}
-
-	expectedCount := 18
-	if len(salaryRows) != expectedCount {
-		t.Errorf("Expected %d rows, got %d", expectedCount, len(salaryRows))
-	}
-
-	if debug {
-		printTable(0, "", "", salaryRows)
 	}
 }
 
@@ -227,6 +114,36 @@ func validateTable(t *testing.T, rows []SalaryRow) {
 	}
 }
 
+func TestCreateTestDB(t *testing.T) {
+	db, cleanup := createTestDB(t)
+	defer cleanup()
+
+	rows, err := db.Query("SELECT emp_no, salary, valid_from, valid_to, transaction_from, transaction_to FROM salaries ORDER BY valid_from")
+	if err != nil {
+		t.Fatalf("Failed to query salaries: %v", err)
+	}
+	defer rows.Close()
+
+	var salaryRows []SalaryRow
+	for rows.Next() {
+		var row SalaryRow
+		err = rows.Scan(&row.EmpNo, &row.Salary, &row.ValidFrom, &row.ValidTo, &row.TransactionFrom, &row.TransactionTo)
+		if err != nil {
+			t.Fatalf("Failed to scan row: %v", err)
+		}
+		salaryRows = append(salaryRows, row)
+	}
+
+	expectedCount := 18
+	if len(salaryRows) != expectedCount {
+		t.Errorf("Expected %d rows, got %d", expectedCount, len(salaryRows))
+	}
+
+	if debug {
+		PrintTable(0, "", "", salaryRows)
+	}
+}
+
 func TestValidFromAndValidTooNotOnExistingPeriodBoundaries(t *testing.T) {
 	db, cleanup := createTestDB(t)
 	defer cleanup()
@@ -234,7 +151,7 @@ func TestValidFromAndValidTooNotOnExistingPeriodBoundaries(t *testing.T) {
 	updateStart := "1995-01-01"
 	updateEnd := "2000-01-01"
 
-	rows := getUpdateWindow(t, db, 10009, 69, updateStart, updateEnd)
+	rows := getSalariesUpdateWindow(t, db, 10009, 69, updateStart, updateEnd)
 	validateTable(t, rows)
 
 	for _, row := range rows {
@@ -281,7 +198,7 @@ func TestUpdateStartOnExistingPeriodBoundary(t *testing.T) {
 	validFrom := "1986-02-18"
 	validTo := "1990-01-01"
 
-	rows := getUpdateWindow(t, db, 10009, 42, validFrom, validTo)
+	rows := getSalariesUpdateWindow(t, db, 10009, 42, validFrom, validTo)
 
 	// Verify that no row should end exactly at validFrom since it's already a boundary
 	for _, row := range rows {
@@ -311,7 +228,7 @@ func TestUpdateEndOnExistingPeriodBoundary(t *testing.T) {
 	updateStart := "1995-01-01"
 	updateEnd := "2000-02-15"
 
-	rows := getUpdateWindow(t, db, 10009, 55, updateStart, updateEnd)
+	rows := getSalariesUpdateWindow(t, db, 10009, 55, updateStart, updateEnd)
 
 	// When updateEnd coincides with an existing boundary, it's correct to have
 	// NO record starting at that boundary because it's outside the update window
@@ -342,7 +259,7 @@ func TestUpdateStartBeforeEarliestRecord(t *testing.T) {
 	updateStart := "1980-01-01"
 	updateEnd := "1990-01-01"
 
-	rows := getUpdateWindow(t, db, 10009, 33, updateStart, updateEnd)
+	rows := getSalariesUpdateWindow(t, db, 10009, 33, updateStart, updateEnd)
 
 	// Since updateStart is before any existing data, the first row should start at updateStart
 	// to cover the entire requested period, not just the overlapping portion
@@ -378,7 +295,7 @@ func TestUpdateWindowEntirelyBeforeExistingData(t *testing.T) {
 	updateStart := "1980-01-01"
 	updateEnd := "1984-01-01"
 
-	rows := getUpdateWindow(t, db, 10009, 77, updateStart, updateEnd)
+	rows := getSalariesUpdateWindow(t, db, 10009, 77, updateStart, updateEnd)
 
 	// Should return 1 row representing the requested period with the requested salary
 	expectedRows := 1
@@ -417,7 +334,7 @@ func TestUpdateWindowEntirelyBeforeExistingData(t *testing.T) {
 //	updateStart := "2010-01-01"
 //	updateEnd := "2015-01-01"
 //
-//	rows := getUpdateWindow(t, db, 10009, 88, updateStart, updateEnd)
+//	rows := getSalariesUpdateWindow(t, db, 10009, 88, updateStart, updateEnd)
 //
 //	// Should return 3 rows: before segment, update segment, and after segment
 //	// This happens because the last existing record has valid_to = '9999-12-31 23:59:59'
