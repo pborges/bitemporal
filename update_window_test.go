@@ -1,4 +1,4 @@
-package bitemporal
+package bitemporal_test
 
 import (
 	"database/sql"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pborges/bitemporal"
 )
 
 const debug = true
@@ -37,7 +38,7 @@ func getSalariesUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64
 		t.Error(err)
 	}
 
-	frag, err := CreatePeriodsQuery(UpdateWindow{
+	frag, err := bitemporal.CreatePeriodsQuery(bitemporal.UpdateWindow{
 		Table:     "salaries",
 		Select:    []string{"emp_no", "salary"},
 		FilterBy:  []string{"emp_no"},
@@ -348,7 +349,7 @@ func TestRowCollapse(t *testing.T) {
 		t.Error(err)
 	}
 
-	frag, err := CreatePeriodsQuery(UpdateWindow{
+	frag, err := bitemporal.CreatePeriodsQuery(bitemporal.UpdateWindow{
 		Table:     "salaries",
 		Select:    []string{"emp_no", "salary"},
 		FilterBy:  []string{"emp_no"},

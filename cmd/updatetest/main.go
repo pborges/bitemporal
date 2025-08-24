@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"log"
 	"os"
@@ -28,11 +29,17 @@ func AsTime(s string) time.Time {
 	return t
 }
 
+// This file is just a scratch pad for now
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
 
-	repo, err := bitemporal.NewTemporalDB("bitemporal.db")
+	database, err := sql.Open("sqlite3", "bitemporal.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repo, err := bitemporal.NewTemporalDB(database)
 	if err != nil {
 		log.Fatalln(err)
 	}

@@ -1,4 +1,4 @@
-package bitemporal
+package bitemporal_test
 
 import (
 	"fmt"

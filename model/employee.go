@@ -72,6 +72,26 @@ func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, er
 	return employee, nil
 }
 
+func (r EmployeeRepository) AllRecords(ctx context.Context, empNo int64) ([]Employee, error) {
+	rows, err := r.repo.Query(ctx, "SELECT emp_no, birth_date, first_name, last_name, gender, hire_date, valid_from, valid_to, transaction_from, transaction_to FROM employees WHERE emp_no=? ORDER BY transaction_from, valid_from", empNo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var employees []Employee
+	for rows.Next() {
+		var emp Employee
+		err = rows.Scan(&emp.EmpNo, &emp.BirthDate, &emp.FirstName, &emp.LastName, &emp.Gender, &emp.HireDate,
+			&emp.ValidFrom, &emp.ValidTo, &emp.TransactionFrom, &emp.TransactionEnd)
+		if err != nil {
+			return nil, err
+		}
+		employees = append(employees, emp)
+	}
+	return employees, nil
+}
+
 func (r EmployeeRepository) Save(m Employee, from, to time.Time) error {
 	sql := `
 -- Step 1: Close any overlapping records by setting their valid_to to the start of new period
