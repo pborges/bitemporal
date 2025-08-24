@@ -49,7 +49,7 @@ type EmployeeRepository struct {
 }
 
 func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, error) {
-	row := r.repo.QueryRow(ctx, "SELECT emp_no, birth_date, first_name, last_name, gender, hire_date, valid_to, valid_from, transaction_from, transaction_to FROM employees$ WHERE emp_no=? ORDER BY transaction_from, valid_to", empNo)
+	row := r.repo.QueryRow(ctx, "SELECT emp_no, birth_date, first_name, last_name, gender, hire_date, valid_to, valid_from, transaction_from, transaction_to FROM employees$ WHERE emp_no=@emp_no ORDER BY transaction_from, valid_to", map[string]any{"emp_no": empNo})
 	if row.Err() != nil {
 		return Employee{}, row.Err()
 	}
@@ -73,7 +73,7 @@ func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, er
 }
 
 func (r EmployeeRepository) AllRecords(ctx context.Context, empNo int64) ([]Employee, error) {
-	rows, err := r.repo.Query(ctx, "SELECT emp_no, birth_date, first_name, last_name, gender, hire_date, valid_from, valid_to, transaction_from, transaction_to FROM employees WHERE emp_no=? ORDER BY transaction_from, valid_from", empNo)
+	rows, err := r.repo.Query(ctx, "SELECT emp_no, birth_date, first_name, last_name, gender, hire_date, valid_from, valid_to, transaction_from, transaction_to FROM employees WHERE emp_no=@emp_no ORDER BY transaction_from, valid_from", map[string]any{"emp_no": empNo})
 	if err != nil {
 		return nil, err
 	}

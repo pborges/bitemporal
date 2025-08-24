@@ -52,48 +52,56 @@ func (repo *TemporalDB) Ping() error {
 	return repo.db.Ping()
 }
 
-func (repo *TemporalDB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	query, args = repo.prepareQuery(ctx, query, args)
-	return repo.db.Query(query, args...)
+func (repo *TemporalDB) Query(ctx context.Context, query string, args map[string]any) (*sql.Rows, error) {
+	fragment := repo.prepareQuery(ctx, QueryFragment{query, args})
+	return repo.db.Query(fragment.Query, fragment.Args()...)
 }
 
-func (repo *TemporalDB) prepareQuery(ctx context.Context, query string, args []any) (string, []any) {
+func (repo *TemporalDB) prepareQuery(ctx context.Context, fragment QueryFragment) QueryFragment {
 	validMoment := GetValidMoment(ctx)
 	systemMoment := GetSystemMoment(ctx)
+
+	// Add temporal parameters once
+	if !validMoment.IsZero() {
+		fragment.ArgMap["valid_from"] = validMoment
+		fragment.ArgMap["valid_to"] = validMoment
+	}
+	if !systemMoment.IsZero() {
+		fragment.ArgMap["transaction_from"] = systemMoment
+		fragment.ArgMap["transaction_to"] = systemMoment
+	}
 
 	// relies on the queryPlanner to ignore unused CTEs
 	var ctes []string
 	for _, table := range repo.temporalTables {
 		predicate := ""
 		var filters []string
-		var filterArgs []any
 		if !validMoment.IsZero() {
-			filters = append(filters, "valid_from <= ? AND ? < valid_to")
-			filterArgs = append(filterArgs, validMoment, validMoment)
+			filters = append(filters, "valid_from <= @valid_from AND @valid_to < valid_to")
 		}
 		if !systemMoment.IsZero() {
-			filters = append(filters, "transaction_from <= ? AND ? < transaction_to")
-			filterArgs = append(filterArgs, systemMoment, systemMoment)
+			filters = append(filters, "transaction_from <= @transaction_from AND @transaction_to < transaction_to")
 		}
 		if !validMoment.IsZero() || !systemMoment.IsZero() {
 			predicate = " WHERE (" + strings.Join(filters, " AND ") + ")"
-			args = append(filterArgs, args...)
 		}
 		ctes = append(ctes, fmt.Sprintf("\n%s$ as (SELECT * FROM %s%s)", table.Name, table.Name, predicate))
 	}
-	query = fmt.Sprintf("WITH %s \n%s", strings.Join(ctes, ","), query)
+
+	fragment.Query = fmt.Sprintf("WITH %s \n%s", strings.Join(ctes, ","), fragment.Query)
+
 	if dumpQueries {
 		fmt.Printf("- QUERY [VALID: %s SYS: %s] ----------------------------\n", validMoment.Format(time.Stamp), systemMoment.Format(time.Stamp))
-		fmt.Println(query)
-		for _, arg := range args {
-			fmt.Println("-", arg)
+		fmt.Println(fragment.Query)
+		for k, v := range fragment.ArgMap {
+			fmt.Printf("- %s: %v\n", k, v)
 		}
 		fmt.Println("--------------------------------------------------------")
 	}
-	return query, args
+	return fragment
 }
 
-func (repo *TemporalDB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
-	query, args = repo.prepareQuery(ctx, query, args)
-	return repo.db.QueryRow(query, args...)
+func (repo *TemporalDB) QueryRow(ctx context.Context, query string, args map[string]any) *sql.Row {
+	fragment := repo.prepareQuery(ctx, QueryFragment{query, args})
+	return repo.db.QueryRow(fragment.Query, fragment.Args()...)
 }

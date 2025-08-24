@@ -12,6 +12,8 @@ import (
 	"github.com/pborges/bitemporal/model"
 )
 
+const debugTemporal = true
+
 //go:embed sql/schema.sql
 var temporalSchema string
 
@@ -69,7 +71,7 @@ func queryEmployeeAtTime(t *testing.T, repo *model.EmployeeRepository, empNo int
 		t.Fatalf("Failed to query employee: %v", err)
 	}
 
-	if debug {
+	if debugTemporal {
 		t.Logf("Query: emp_no=%d, valid_time=%s, transaction_time=%s", empNo, validTime, transactionTime)
 		t.Logf("Result: %s %s (valid: %s to %s, tx: %s to %s)",
 			employee.FirstName, employee.LastName,
@@ -169,7 +171,7 @@ func TestCompleteAuditTrail(t *testing.T) {
 		t.Errorf("Expected %d audit trail records, got %d", expectedRecords, len(auditTrail))
 	}
 
-	if debug {
+	if debugTemporal {
 		t.Log("Complete Audit Trail for Jane Smith/Johnson:")
 		for i, emp := range auditTrail {
 			t.Logf("Record %d: %s %s | Valid: %s to %s | Transaction: %s to %s",

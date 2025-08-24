@@ -38,7 +38,7 @@ type DepartmentRepository struct {
 }
 
 func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Department, error) {
-	row := r.repo.QueryRow(ctx, "SELECT dept_no, dept_name, valid_to, valid_from, transaction_from, transaction_to FROM departments$ WHERE dept_no=? ORDER BY transaction_from, valid_to", deptNo)
+	row := r.repo.QueryRow(ctx, "SELECT dept_no, dept_name, valid_to, valid_from, transaction_from, transaction_to FROM departments$ WHERE dept_no=@dept_no ORDER BY transaction_from, valid_to", map[string]any{"dept_no": deptNo})
 	if row.Err() != nil {
 		return Department{}, row.Err()
 	}
@@ -48,4 +48,23 @@ func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Departme
 		return Department{}, err
 	}
 	return department, nil
+}
+
+func (r DepartmentRepository) AllRecords(ctx context.Context, deptNo string) ([]Department, error) {
+	rows, err := r.repo.Query(ctx, "SELECT dept_no, dept_name, valid_from, valid_to, transaction_from, transaction_to FROM departments WHERE dept_no=@emp_no ORDER BY transaction_from, valid_from", map[string]any{"emp_no": deptNo})
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var departments []Department
+	for rows.Next() {
+		var dept Department
+		err = rows.Scan(&dept.DeptNo, &dept.DeptName, &dept.ValidFrom, &dept.ValidTo, &dept.TransactionFrom, &dept.TransactionEnd)
+		if err != nil {
+			return nil, err
+		}
+		departments = append(departments, dept)
+	}
+	return departments, nil
 }

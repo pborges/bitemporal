@@ -14,14 +14,14 @@ import (
 var createUpdateWindowQuery string
 
 type QueryFragment struct {
-	Query     string
-	NamedArgs []sql.NamedArg
+	Query  string
+	ArgMap map[string]any
 }
 
 func (q QueryFragment) Args() []any {
-	args := make([]any, len(q.NamedArgs))
-	for i, namedArg := range q.NamedArgs {
-		args[i] = any(namedArg)
+	args := make([]any, 0, len(q.ArgMap))
+	for k, v := range q.ArgMap {
+		args = append(args, sql.Named(k, v))
 	}
 	return args
 }
@@ -62,9 +62,11 @@ func CreatePeriodsQuery(window UpdateWindow) (QueryFragment, error) {
 		return QueryFragment{}, err
 	}
 
-	args := []sql.NamedArg{
-		sql.Named("valid_from", window.ValidFrom),
-		sql.Named("valid_to", window.ValidTo),
+	fragment := QueryFragment{
+		ArgMap: map[string]any{
+			"valid_from": window.ValidFrom,
+			"valid_to":   window.ValidTo,
+		},
 	}
 
 	for i := range window.Select {
@@ -72,7 +74,7 @@ func CreatePeriodsQuery(window UpdateWindow) (QueryFragment, error) {
 		if !ok {
 			return QueryFragment{}, fmt.Errorf("value not found for column %q", window.Select[i])
 		}
-		args = append(args, sql.Named(window.Select[i], val))
+		fragment.ArgMap[window.Select[i]] = val
 	}
 
 	var buf bytes.Buffer
@@ -81,8 +83,7 @@ func CreatePeriodsQuery(window UpdateWindow) (QueryFragment, error) {
 		return QueryFragment{}, err
 	}
 
-	return QueryFragment{
-		Query:     buf.String(),
-		NamedArgs: args,
-	}, nil
+	fragment.Query = buf.String()
+
+	return fragment, nil
 }
