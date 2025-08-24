@@ -30,7 +30,7 @@ type Employee struct {
 	LastName  string    `json:"last_name"`
 	Gender    string    `json:"gender"`
 	HireDate  time.Time `json:"hire_date"`
-	bitemporal.BitemporalEntity
+	bitemporal.Entity
 }
 
 func (e Employee) String() string {
@@ -64,7 +64,7 @@ func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, er
 		&employee.ValidTo,
 		&employee.ValidFrom,
 		&employee.TransactionFrom,
-		&employee.TransactionEnd,
+		&employee.TransactionTo,
 	)
 	if err != nil {
 		return Employee{}, err
@@ -83,7 +83,7 @@ func (r EmployeeRepository) AllRecords(ctx context.Context, empNo int64) ([]Empl
 	for rows.Next() {
 		var emp Employee
 		err = rows.Scan(&emp.EmpNo, &emp.BirthDate, &emp.FirstName, &emp.LastName, &emp.Gender, &emp.HireDate,
-			&emp.ValidFrom, &emp.ValidTo, &emp.TransactionFrom, &emp.TransactionEnd)
+			&emp.ValidFrom, &emp.ValidTo, &emp.TransactionFrom, &emp.TransactionTo)
 		if err != nil {
 			return nil, err
 		}

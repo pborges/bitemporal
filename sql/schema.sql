@@ -3,11 +3,11 @@ CREATE TABLE IF NOT EXISTS employees
 (
     row_id           INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,
     emp_no           INTEGER  NOT NULL,
-    birth_date       DATE     NOT NULL,
+    birth_date       DATETIME NOT NULL,
     first_name       TEXT     NOT NULL,
     last_name        TEXT     NOT NULL,
     gender           TEXT     NOT NULL CHECK (gender IN ('M', 'F', 'O')),
-    hire_date        DATE     NOT NULL,
+    hire_date        DATETIME NOT NULL,
     -- Bitemporal fields
     valid_from       DATETIME NOT NULL,
     valid_to         DATETIME NOT NULL DEFAULT '9999-12-31 23:59:59',

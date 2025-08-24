@@ -10,6 +10,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pborges/bitemporal"
 )
 
 var (
@@ -126,11 +127,11 @@ func importEmployees(db *sql.DB) error {
 			}
 
 			empNo := match[1]
-			birthDate := match[2]
+			birthDate := bitemporal.AsTime(match[2])
 			firstName := match[3]
 			lastName := match[4]
 			gender := match[5]
-			hireDate := match[6]
+			hireDate := bitemporal.AsTime(match[6])
 
 			// For bitemporal, we set valid_from to hire_date and transaction_time to now
 			_, err := stmt.Exec(empNo, firstName, lastName, hireDate, birthDate, gender, hireDate, now)

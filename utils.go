@@ -2,24 +2,24 @@ package bitemporal
 
 import (
 	"errors"
-	"strings"
 	"time"
 )
 
 // AsTime attempts to convert a few common date formats to a time.Time
 // This exists purely for developer laziness
 func AsTime(s string) time.Time {
-	layout := time.DateTime
-	if !strings.Contains(s, " ") {
-		layout = time.DateOnly
+	layouts := []string{
+		time.DateTime,
+		time.DateOnly,
+		"2006-01-02 15:04:05-07:00",
 	}
 
-	t, err := time.Parse(layout, strings.TrimSpace(s))
-	if err != nil {
-		panic(err)
+	for _, layout := range layouts {
+		t, err := time.Parse(layout, s)
+		if err == nil {
+			return t
+		}
 	}
-	if t.IsZero() {
-		panic(errors.New("time is zero"))
-	}
-	return t
+
+	panic(errors.New(s))
 }

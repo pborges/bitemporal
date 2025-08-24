@@ -20,7 +20,7 @@ func init() {
 type Department struct {
 	DeptNo   string `json:"dept_no"`
 	DeptName string `json:"dept_name"`
-	bitemporal.BitemporalEntity
+	bitemporal.Entity
 }
 
 func (d Department) String() string {
@@ -43,7 +43,7 @@ func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Departme
 		return Department{}, row.Err()
 	}
 	department := Department{}
-	err := row.Scan(&department.DeptNo, &department.DeptName, &department.ValidTo, &department.ValidFrom, &department.TransactionFrom, &department.TransactionEnd)
+	err := row.Scan(&department.DeptNo, &department.DeptName, &department.ValidTo, &department.ValidFrom, &department.TransactionFrom, &department.TransactionTo)
 	if err != nil {
 		return Department{}, err
 	}
@@ -60,7 +60,7 @@ func (r DepartmentRepository) AllRecords(ctx context.Context, deptNo string) ([]
 	var departments []Department
 	for rows.Next() {
 		var dept Department
-		err = rows.Scan(&dept.DeptNo, &dept.DeptName, &dept.ValidFrom, &dept.ValidTo, &dept.TransactionFrom, &dept.TransactionEnd)
+		err = rows.Scan(&dept.DeptNo, &dept.DeptName, &dept.ValidFrom, &dept.ValidTo, &dept.TransactionFrom, &dept.TransactionTo)
 		if err != nil {
 			return nil, err
 		}

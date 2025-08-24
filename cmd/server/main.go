@@ -42,7 +42,7 @@ func main() {
 		log.Fatalln(err)
 	}
 	for _, salary := range salaries {
-		fmt.Printf("  $%d %+v\n", salary.Salary, salary.BitemporalEntity)
+		fmt.Printf("  $%d %+v\n", salary.Salary, salary.Entity)
 	}
 }
 
@@ -59,8 +59,8 @@ func dump(employeesRepo *model.EmployeeRepository, salariesRepo *model.SalaryRep
 		log.Fatalln(err)
 	}
 
-	fmt.Printf("Employee:\n  %s %s %s\nSalaries:\n", employee.FirstName, employee.LastName, employee.BitemporalEntity)
+	fmt.Printf("Employee:\n  %s %s %s\nSalaries:\n", employee.FirstName, employee.LastName, employee.Entity)
 	for _, salary := range salaries {
-		fmt.Printf("  $%d %+v\n", salary.Salary, salary.BitemporalEntity)
+		fmt.Printf("  $%d %+v\n", salary.Salary, salary.Entity)
 	}
 }

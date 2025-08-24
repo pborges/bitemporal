@@ -54,20 +54,34 @@ func main() {
 		Gender:    "M",
 		BirthDate: AsTime("1990-01-01"),
 		HireDate:  AsTime("2000-01-01"),
-	}, time.Now().Add(24*time.Hour*365*-1), bitemporal.EndOfTime)
+	}, AsTime("2000-01-01"), bitemporal.EndOfTime)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	err = employeesRepo.Save(model.Employee{
-		EmpNo:     100,
-		FirstName: "John",
-		LastName:  "Smythe",
-		Gender:    "M",
-		BirthDate: AsTime("1990-01-01"),
-		HireDate:  AsTime("2001-01-01"),
-	}, time.Now().Add(24*time.Hour*365*-1), bitemporal.EndOfTime)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	//err = employeesRepo.Save(model.Employee{
+	//	EmpNo:     100,
+	//	FirstName: "John",
+	//	LastName:  "Smythe",
+	//	Gender:    "M",
+	//	BirthDate: AsTime("1990-01-01"),
+	//	HireDate:  AsTime("2000-01-01"),
+	//}, AsTime("2010-01-01"), bitemporal.EndOfTime)
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//
+	//ctx := bitemporal.WithValidTime(context.Background(), AsTime("2020-01-01"))
+	//emp1, err := employeesRepo.ById(ctx, 100)
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//fmt.Printf("%+v\n", emp1)
+	//
+	//ctx = bitemporal.WithValidTime(context.Background(), AsTime("2005-01-01"))
+	//emp2, err := employeesRepo.ById(ctx, 100)
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//fmt.Printf("%+v\n", emp2)
 }

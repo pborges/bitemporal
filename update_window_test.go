@@ -339,22 +339,12 @@ func TestRowCollapse(t *testing.T) {
 	var validFrom = "1995-01-01"
 	var validTo = "2000-01-01"
 
-	validToT, err := time.Parse(time.DateOnly, validTo)
-	if err != nil {
-		t.Error(err)
-	}
-
-	validFromT, err := time.Parse(time.DateOnly, validFrom)
-	if err != nil {
-		t.Error(err)
-	}
-
 	frag, err := bitemporal.CreatePeriodsQuery(bitemporal.UpdateWindow{
 		Table:     "salaries",
 		Select:    []string{"emp_no", "salary"},
 		FilterBy:  []string{"emp_no"},
-		ValidFrom: validFromT,
-		ValidTo:   validToT,
+		ValidFrom: bitemporal.AsTime(validFrom),
+		ValidTo:   bitemporal.AsTime(validTo),
 		Values:    map[string]interface{}{"emp_no": empNo, "salary": salary},
 	})
 	if err != nil {

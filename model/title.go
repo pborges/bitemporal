@@ -20,7 +20,7 @@ func init() {
 type Title struct {
 	EmpNo int64  `json:"emp_no"`
 	Title string `json:"title"`
-	bitemporal.BitemporalEntity
+	bitemporal.Entity
 }
 
 func (t Title) String() string {
@@ -47,7 +47,7 @@ func (r TitleRepository) ForEmployee(ctx context.Context, empNo int64) ([]Title,
 	var titles []Title
 	for rows.Next() {
 		title := Title{}
-		err := rows.Scan(&title.EmpNo, &title.Title, &title.ValidTo, &title.ValidFrom, &title.TransactionFrom, &title.TransactionEnd)
+		err := rows.Scan(&title.EmpNo, &title.Title, &title.ValidTo, &title.ValidFrom, &title.TransactionFrom, &title.TransactionTo)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,7 @@ func (r TitleRepository) AllRecords(ctx context.Context, empNo int64) ([]Title, 
 	var titles []Title
 	for rows.Next() {
 		var title Title
-		err = rows.Scan(&title.EmpNo, &title.Title, &title.ValidFrom, &title.ValidTo, &title.TransactionFrom, &title.TransactionEnd)
+		err = rows.Scan(&title.EmpNo, &title.Title, &title.ValidFrom, &title.ValidTo, &title.TransactionFrom, &title.TransactionTo)
 		if err != nil {
 			return nil, err
 		}

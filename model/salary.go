@@ -20,7 +20,7 @@ func init() {
 type Salary struct {
 	EmpNo  int64 `json:"emp_no"`
 	Salary int64 `json:"salary"`
-	bitemporal.BitemporalEntity
+	bitemporal.Entity
 }
 
 func (s Salary) String() string {
@@ -47,7 +47,7 @@ func (r SalaryRepository) ForEmployee(ctx context.Context, empNo int64) ([]Salar
 	var salaries []Salary
 	for rows.Next() {
 		salary := Salary{}
-		err := rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidTo, &salary.ValidFrom, &salary.TransactionFrom, &salary.TransactionEnd)
+		err := rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidTo, &salary.ValidFrom, &salary.TransactionFrom, &salary.TransactionTo)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,7 @@ func (r SalaryRepository) AllRecords(ctx context.Context, empNo int64) ([]Salary
 	var salaries []Salary
 	for rows.Next() {
 		var salary Salary
-		err = rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidFrom, &salary.ValidTo, &salary.TransactionFrom, &salary.TransactionEnd)
+		err = rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidFrom, &salary.ValidTo, &salary.TransactionFrom, &salary.TransactionTo)
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const dumpQueries = true
+const dumpQueries = false
 
 var pragmas = []string{
 	"PRAGMA journal_mode = MEMORY",

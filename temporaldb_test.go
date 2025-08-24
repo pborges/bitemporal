@@ -65,7 +65,7 @@ func queryEmployeeAtTime(t *testing.T, repo *model.EmployeeRepository, empNo int
 		t.Logf("Result: %s %s (valid: %s to %s, tx: %s to %s)",
 			employee.FirstName, employee.LastName,
 			employee.ValidFrom.Format("2006-01-02 15:04:05"), employee.ValidTo.Format("2006-01-02 15:04:05"),
-			employee.TransactionFrom.Format("2006-01-02 15:04:05"), employee.TransactionEnd.Format("2006-01-02 15:04:05"))
+			employee.TransactionFrom.Format("2006-01-02 15:04:05"), employee.TransactionTo.Format("2006-01-02 15:04:05"))
 	}
 
 	return employee
@@ -163,7 +163,7 @@ func TestCompleteAuditTrail(t *testing.T) {
 			t.Logf("Record %d: %s %s | Valid: %s to %s | Transaction: %s to %s",
 				i+1, emp.FirstName, emp.LastName,
 				emp.ValidFrom.Format("2006-01-02 15:04:05"), emp.ValidTo.Format("2006-01-02 15:04:05"),
-				emp.TransactionFrom.Format("2006-01-02 15:04:05"), emp.TransactionEnd.Format("2006-01-02 15:04:05"))
+				emp.TransactionFrom.Format("2006-01-02 15:04:05"), emp.TransactionTo.Format("2006-01-02 15:04:05"))
 		}
 	}
 
