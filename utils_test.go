@@ -20,7 +20,7 @@ func highlight(highlight map[any]int, val any) string {
 	return sVal
 }
 
-func PrintTable(salary int64, validFrom string, validTo string, rows []SalaryRow) {
+func PrintSalaryTable(salary int64, validFrom string, validTo string, rows []SalaryRow) {
 	zeroValues := salary == 0 && validFrom == "" && validTo == ""
 	highlightMap := make(map[any]int)
 	if !zeroValues {

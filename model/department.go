@@ -27,14 +27,14 @@ func (d Department) String() string {
 	return fmt.Sprintf("Department{DeptNo: %s, Name: %s}", d.DeptNo, d.DeptName)
 }
 
-func NewDepartmentRepository(repo *bitemporal.Repository) *DepartmentRepository {
+func NewDepartmentRepository(repo *bitemporal.TemporalDB) *DepartmentRepository {
 	return &DepartmentRepository{
 		repo: repo,
 	}
 }
 
 type DepartmentRepository struct {
-	repo *bitemporal.Repository
+	repo *bitemporal.TemporalDB
 }
 
 func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Department, error) {

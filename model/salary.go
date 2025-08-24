@@ -27,14 +27,14 @@ func (s Salary) String() string {
 	return fmt.Sprintf("Salary{EmpNo: %d, Amount: %d}", s.EmpNo, s.Salary)
 }
 
-func NewSalaryRepository(repo *bitemporal.Repository) *SalaryRepository {
+func NewSalaryRepository(repo *bitemporal.TemporalDB) *SalaryRepository {
 	return &SalaryRepository{
 		repo: repo,
 	}
 }
 
 type SalaryRepository struct {
-	repo *bitemporal.Repository
+	repo *bitemporal.TemporalDB
 }
 
 func (r SalaryRepository) ForEmployee(ctx context.Context, empNo int64) ([]Salary, error) {

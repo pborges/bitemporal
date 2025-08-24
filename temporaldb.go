@@ -25,12 +25,7 @@ type Table struct {
 	Columns []string
 }
 
-func NewRepository(db string) (*Repository, error) {
-	database, err := sql.Open("sqlite3", db)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTemporalDB(database *sql.DB) (*TemporalDB, error) {
 	if err := database.Ping(); err != nil {
 		return nil, err
 	}
@@ -41,28 +36,28 @@ func NewRepository(db string) (*Repository, error) {
 		}
 	}
 
-	return &Repository{database, Schema}, nil
+	return &TemporalDB{database, Schema}, nil
 }
 
-type Repository struct {
+type TemporalDB struct {
 	db             *sql.DB
 	temporalTables []Table
 }
 
-func (repo *Repository) Close() error {
+func (repo *TemporalDB) Close() error {
 	return repo.db.Close()
 }
 
-func (repo *Repository) Ping() error {
+func (repo *TemporalDB) Ping() error {
 	return repo.db.Ping()
 }
 
-func (repo *Repository) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+func (repo *TemporalDB) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	query, args = repo.prepareQuery(ctx, query, args)
 	return repo.db.Query(query, args...)
 }
 
-func (repo *Repository) prepareQuery(ctx context.Context, query string, args []any) (string, []any) {
+func (repo *TemporalDB) prepareQuery(ctx context.Context, query string, args []any) (string, []any) {
 	validMoment := GetValidMoment(ctx)
 	systemMoment := GetSystemMoment(ctx)
 
@@ -98,11 +93,7 @@ func (repo *Repository) prepareQuery(ctx context.Context, query string, args []a
 	return query, args
 }
 
-func (repo *Repository) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+func (repo *TemporalDB) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
 	query, args = repo.prepareQuery(ctx, query, args)
 	return repo.db.QueryRow(query, args...)
 }
-
-//func (repo *Repository) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-//
-//}

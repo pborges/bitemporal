@@ -38,14 +38,14 @@ func (e Employee) String() string {
 		e.EmpNo, e.FirstName, e.LastName, e.Gender, e.HireDate.Format("2006-01-02"))
 }
 
-func NewEmployeeRepository(repo *bitemporal.Repository) *EmployeeRepository {
+func NewEmployeeRepository(repo *bitemporal.TemporalDB) *EmployeeRepository {
 	return &EmployeeRepository{
 		repo: repo,
 	}
 }
 
 type EmployeeRepository struct {
-	repo *bitemporal.Repository
+	repo *bitemporal.TemporalDB
 }
 
 func (r EmployeeRepository) ById(ctx context.Context, empNo int64) (Employee, error) {

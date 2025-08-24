@@ -3,6 +3,7 @@ package bitemporal
 import (
 	"database/sql"
 	_ "embed"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,7 +12,10 @@ import (
 
 const debug = true
 
-//go:embed sql/test_data.sql
+//go:embed sql/schema.sql
+var schema string
+
+//go:embed sql/test_window_data.sql
 var tempDataQuery string
 
 type SalaryRow struct {
@@ -61,7 +65,7 @@ func getSalariesUpdateWindow(t *testing.T, db *sql.DB, empNo int64, salary int64
 		salaryRows = append(salaryRows, row)
 	}
 	if debug {
-		PrintTable(salary, validFrom, validTo, salaryRows)
+		PrintSalaryTable(salary, validFrom, validTo, salaryRows)
 	}
 	return salaryRows
 }
@@ -71,7 +75,10 @@ func createTestDB(t *testing.T) (*sql.DB, func()) {
 	if err != nil {
 		t.Fatalf("Failed to open in-memory database: %v", err)
 	}
-
+	_, err = db.Exec(schema)
+	if err != nil {
+		t.Fatalf("Failed to execute schema: %v", err)
+	}
 	_, err = db.Exec(tempDataQuery)
 	if err != nil {
 		t.Fatalf("Failed to execute tempDataQuery: %v", err)
@@ -140,7 +147,7 @@ func TestCreateTestDB(t *testing.T) {
 	}
 
 	if debug {
-		PrintTable(0, "", "", salaryRows)
+		PrintSalaryTable(0, "", "", salaryRows)
 	}
 }
 
@@ -151,13 +158,12 @@ func TestValidFromAndValidTooNotOnExistingPeriodBoundaries(t *testing.T) {
 	updateStart := "1995-01-01"
 	updateEnd := "2000-01-01"
 
-	rows := getSalariesUpdateWindow(t, db, 10009, 69, updateStart, updateEnd)
-	validateTable(t, rows)
+	rows := getSalariesUpdateWindow(t, db, 10009, 42, updateStart, updateEnd)
 
 	for _, row := range rows {
 		if row.ValidFrom >= updateStart && row.ValidTo <= updateEnd {
-			if row.Salary != 69 {
-				t.Errorf("Expected salary 69 for row with ValidFrom=%s ValidTo=%s, got %d",
+			if row.Salary != 42 {
+				t.Errorf("Expected salary 42 for row with ValidFrom=%s ValidTo=%s, got %d",
 					row.ValidFrom, row.ValidTo, row.Salary)
 			}
 		}
@@ -186,7 +192,6 @@ func TestValidFromAndValidTooNotOnExistingPeriodBoundaries(t *testing.T) {
 			t.Errorf("Expected last row to have existing salary, got %d", lastRow.Salary)
 		}
 	}
-
 	validateTable(t, rows)
 }
 
@@ -321,6 +326,93 @@ func TestUpdateWindowEntirelyBeforeExistingData(t *testing.T) {
 	}
 
 	validateTable(t, rows)
+}
+
+// TestRowCollapse verifies that the
+func TestRowCollapse(t *testing.T) {
+	db, cleanup := createTestDB(t)
+	defer cleanup()
+
+	var empNo = 10009
+	var salary int64 = 42
+	var validFrom = "1995-01-01"
+	var validTo = "2000-01-01"
+
+	validToT, err := time.Parse(time.DateOnly, validTo)
+	if err != nil {
+		t.Error(err)
+	}
+
+	validFromT, err := time.Parse(time.DateOnly, validFrom)
+	if err != nil {
+		t.Error(err)
+	}
+
+	frag, err := CreatePeriodsQuery(UpdateWindow{
+		Table:     "salaries",
+		Select:    []string{"emp_no", "salary"},
+		FilterBy:  []string{"emp_no"},
+		ValidFrom: validFromT,
+		ValidTo:   validToT,
+		Values:    map[string]interface{}{"emp_no": empNo, "salary": salary},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	query := fmt.Sprintf("SELECT emp_no,salary,min(valid_from),max(valid_to),transaction_from,transaction_to FROM (%s) GROUP BY emp_no,salary ORDER BY valid_from", frag.Query)
+
+	rows, err := db.Query(query, frag.Args()...)
+	if err != nil {
+		t.Fatalf("Failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var salaryRows []SalaryRow
+	for rows.Next() {
+		var row SalaryRow
+		err = rows.Scan(&row.EmpNo, &row.Salary, &row.ValidFrom, &row.ValidTo, &row.TransactionFrom, &row.TransactionTo)
+		if err != nil {
+			t.Fatalf("Failed to scan row: %v", err)
+		}
+		salaryRows = append(salaryRows, row)
+	}
+	if debug {
+		PrintSalaryTable(salary, validFrom, validTo, salaryRows)
+	}
+
+	// Assert that consecutive rows with same salary get collapsed into a single row
+	// The update window (1995-01-01 to 2000-01-01) should create multiple rows with salary 42
+	// that get collapsed into one row spanning the entire period
+	expectedRows := 1 // Should collapse to a single row for the update period
+	actualRows := 0
+
+	for _, row := range salaryRows {
+		if row.Salary == salary && row.ValidFrom >= validFrom+" 00:00:00" && row.ValidTo <= validTo+" 00:00:00" {
+			actualRows++
+		}
+	}
+
+	if actualRows != expectedRows {
+		t.Errorf("Expected %d collapsed row(s) for salary %d in update window, got %d", expectedRows, salary, actualRows)
+	}
+
+	// Verify the collapsed row spans the entire update window
+	if len(salaryRows) > 0 {
+		for _, row := range salaryRows {
+			if row.Salary == salary {
+				expectedValidFrom := validFrom + " 00:00:00"
+				expectedValidTo := validTo + " 00:00:00"
+
+				if row.ValidFrom != expectedValidFrom {
+					t.Errorf("Expected collapsed row ValidFrom to be %s, got %s", expectedValidFrom, row.ValidFrom)
+				}
+				if row.ValidTo != expectedValidTo {
+					t.Errorf("Expected collapsed row ValidTo to be %s, got %s", expectedValidTo, row.ValidTo)
+				}
+			}
+		}
+	}
 }
 
 // disabling this test for now as the sample data end date is "the end of time"

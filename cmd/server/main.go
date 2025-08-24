@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -30,18 +31,24 @@ func AsTime(s string) time.Time {
 	return t
 }
 
+// This file is just a scratch pad for now
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
 
-	repo, err := bitemporal.NewRepository("bitemporal.db")
+	database, err := sql.Open("sqlite3", "bitemporal.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := bitemporal.NewTemporalDB(database)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer repo.Close()
+	defer db.Close()
 
-	employeesRepo := model.NewEmployeeRepository(repo)
-	salariesRepo := model.NewSalaryRepository(repo)
+	employeesRepo := model.NewEmployeeRepository(db)
+	salariesRepo := model.NewSalaryRepository(db)
 
 	dump(employeesRepo, salariesRepo, 10009, time.Now())
 	dump(employeesRepo, salariesRepo, 10009, AsTime("1993-02-17"))
@@ -55,13 +62,12 @@ func main() {
 	for _, salary := range salaries {
 		fmt.Printf("  $%d %+v\n", salary.Salary, salary.BitemporalEntity)
 	}
-
 }
 
-func dump(employeesRepo *model.EmployeeRepository, salariesRepo *model.SalaryRepository, empNo int64, t time.Time) {
-	fmt.Println("* DUMPING AS OF: ", t.Format(time.DateTime))
+func dump(employeesRepo *model.EmployeeRepository, salariesRepo *model.SalaryRepository, empNo int64, asOfValid time.Time) {
+	fmt.Println("* DUMPING AS OF: ", asOfValid.Format(time.DateTime))
 	ctx := bitemporal.InitializeContext(context.Background())
-	ctx = bitemporal.WithValidTime(ctx, t)
+	ctx = bitemporal.WithValidTime(ctx, asOfValid)
 	employee, err := employeesRepo.ById(ctx, empNo)
 	if err != nil {
 		log.Fatalln(err)

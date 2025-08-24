@@ -32,7 +32,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
 
-	repo, err := bitemporal.NewRepository("bitemporal.db")
+	repo, err := bitemporal.NewTemporalDB("bitemporal.db")
 	if err != nil {
 		log.Fatalln(err)
 	}

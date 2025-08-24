@@ -27,14 +27,14 @@ func (t Title) String() string {
 	return fmt.Sprintf("Title{EmpNo: %d, Title: %s}", t.EmpNo, t.Title)
 }
 
-func NewTitleRepository(repo *bitemporal.Repository) *TitleRepository {
+func NewTitleRepository(repo *bitemporal.TemporalDB) *TitleRepository {
 	return &TitleRepository{
 		repo: repo,
 	}
 }
 
 type TitleRepository struct {
-	repo *bitemporal.Repository
+	repo *bitemporal.TemporalDB
 }
 
 func (r TitleRepository) ForEmployee(ctx context.Context, empNo int64) ([]Title, error) {

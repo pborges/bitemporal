@@ -88,4 +88,4 @@ WHERE DATETIME(@valid_from) < (
         AND DATETIME(transaction_from) <= DATETIME(current_timestamp)
         AND DATETIME(transaction_to) >= DATETIME(current_timestamp)
 )
-ORDER BY valid_from;
+ORDER BY valid_from

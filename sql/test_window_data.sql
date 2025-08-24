@@ -1,15 +1,3 @@
-DROP TABLE IF EXISTS salaries;
-CREATE TABLE salaries
-(
-    row_id           INTEGER,
-    emp_no           INTEGER,
-    salary           INTEGER,
-    valid_from       DATETIME,
-    valid_to         DATETIME,
-    transaction_from DATETIME,
-    transaction_to   DATETIME
-);
-
 INSERT INTO salaries
 VALUES (89, 10009, 60929, '1985-02-18', '1986-02-18', '2025-08-23 08:55:49.371425-07:00',
         DATETIME('9999-12-31 23:59:59')),
