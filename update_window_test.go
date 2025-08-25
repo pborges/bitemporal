@@ -482,18 +482,14 @@ func TestUpdateErasingHistory(t *testing.T) {
 	}
 
 	// View current snapshot
-	rows, err := tx.Query("SELECT * "+
-		"FROM salaries WHERE "+
-		"emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <= @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close "+
-		"ORDER BY valid_open",
-		args...,
-	)
+	rows, err := tx.Query(`SELECT * FROM salaries 
+         WHERE emp_no = @emp_no 
+           AND (
+               (@valid_open BETWEEN valid_open AND valid_close) 
+                   OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+                   OR (@valid_close BETWEEN valid_open AND valid_close)
+               ) AND @txn_moment >= txn_open AND @txn_moment < txn_close 
+         ORDER BY valid_open`, args...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -507,50 +503,50 @@ func TestUpdateErasingHistory(t *testing.T) {
 	printMap(columns, res)
 
 	// Close the transaction periods of the rows to be affected
-	_, err = tx.Exec("UPDATE salaries "+
-		"SET txn_close = @txn_moment "+
-		"WHERE emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <=	 @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close",
-		args...)
+	_, err = tx.Exec(`UPDATE salaries SET txn_close = @txn_moment 
+                WHERE emp_no = @emp_no AND (
+                    (@valid_open BETWEEN valid_open AND valid_close) 
+                        OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+                        OR (@valid_close BETWEEN valid_open AND valid_close)
+                    ) 
+                  AND @txn_moment >= txn_open AND @txn_moment < txn_close`,
+		args...,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Insert any history that exists outside the requested period
-	_, err = tx.Exec("INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) "+
-		"SELECT emp_no, salary, valid_open, @valid_open valid_close, @txn_moment, @infinity FROM salaries WHERE emp_no = @emp_no AND @valid_open > valid_open AND @valid_open < valid_close "+
-		"UNION ALL "+
-		"SELECT emp_no, salary, @valid_close valid_open, valid_close, @txn_moment, @infinity FROM salaries WHERE emp_no = @emp_no AND @valid_close > valid_open AND @valid_close < valid_close",
-		args...)
+	_, err = tx.Exec(`INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) 
+							SELECT emp_no, salary, valid_open, @valid_open valid_close, @txn_moment, @infinity FROM salaries 
+                            	WHERE emp_no = @emp_no AND @valid_open > valid_open AND @valid_open < valid_close 
+                            UNION ALL 
+                            SELECT emp_no, salary, @valid_close valid_open, valid_close, @txn_moment, @infinity FROM salaries 
+                            	WHERE emp_no = @emp_no AND @valid_close > valid_open AND @valid_close < valid_close`,
+		args...,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Insert new history
-	_, err = tx.Exec("INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) VALUES (@emp_no, @salary, @valid_open, @valid_close, @txn_moment, @infinity)",
-		args...)
+	_, err = tx.Exec(`INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) 
+							VALUES (@emp_no, @salary, @valid_open, @valid_close, @txn_moment, @infinity)`,
+		args...,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// View current snapshot
-	rows, err = tx.Query("SELECT * "+
-		"FROM salaries WHERE "+
-		"emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <= @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close "+
-		"ORDER BY valid_open",
-		args...,
-	)
+	rows, err = tx.Query(`SELECT * FROM salaries 
+         WHERE emp_no = @emp_no 
+           AND (
+               (@valid_open BETWEEN valid_open AND valid_close) 
+                   OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+                   OR (@valid_close BETWEEN valid_open AND valid_close)
+               ) AND @txn_moment >= txn_open AND @txn_moment < txn_close 
+         ORDER BY valid_open`, args...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -583,18 +579,14 @@ func TestUpdatePreservingHistory(t *testing.T) {
 	}
 
 	// View current snapshot
-	rows, err := tx.Query("SELECT * "+
-		"FROM salaries WHERE "+
-		"emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <= @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close "+
-		"ORDER BY valid_open",
-		args...,
-	)
+	rows, err := tx.Query(`SELECT * FROM salaries 
+         WHERE emp_no = @emp_no 
+           AND (
+               (@valid_open BETWEEN valid_open AND valid_close) 
+                   OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+                   OR (@valid_close BETWEEN valid_open AND valid_close)
+               ) AND @txn_moment >= txn_open AND @txn_moment < txn_close 
+         ORDER BY valid_open`, args...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -608,52 +600,58 @@ func TestUpdatePreservingHistory(t *testing.T) {
 	printMap(columns, res)
 
 	// Close the transaction periods of the rows to be affected
-	_, err = tx.Exec("UPDATE salaries "+
-		"SET txn_close = @txn_moment "+
-		"WHERE emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <=	 @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close",
-		args...)
+	_, err = tx.Exec(`UPDATE salaries SET txn_close = @txn_moment 
+							WHERE emp_no = @emp_no 
+							AND (
+								(@valid_open BETWEEN valid_open AND valid_close) 
+								OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+								OR (@valid_close BETWEEN valid_open AND valid_close)
+							) 
+							AND @txn_moment >= txn_open AND @txn_moment < txn_close`,
+		args...,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Insert any history that exists outside the requested period
-	_, err = tx.Exec("INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) "+
-		"SELECT emp_no, salary, valid_open, @valid_open valid_close, @txn_moment, @infinity FROM salaries WHERE emp_no = @emp_no AND @valid_open > valid_open AND @valid_open < valid_close "+
-		"UNION ALL "+
-		"SELECT emp_no, salary, CASE WHEN valid_open <= @valid_open THEN valid_open ELSE @valid_open END valid_open, CASE WHEN valid_close <= @REQ_CLOSE THEN valid_close ELSE @valid_close END valid_close, @txn_moment txn_open, @infinity txn_close FROM salaries WHERE emp_no = @emp_no AND (valid_open >= @valid_open AND valid_close <= @valid_close) AND @txn_moment >= txn_open AND @txn_moment = txn_close "+
-		"UNION ALL "+
-		"SELECT emp_no, salary, @valid_close valid_open, valid_close, @txn_moment, @infinity FROM salaries WHERE emp_no = @emp_no AND @valid_close > valid_open AND @valid_close < valid_close",
-		args...)
+	_, err = tx.Exec(`INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close) 
+							SELECT emp_no, salary, valid_open, @valid_open valid_close, @txn_moment, @infinity FROM salaries 
+							WHERE emp_no = @emp_no AND @valid_open > valid_open AND @valid_open < valid_close 
+							UNION ALL 
+							SELECT emp_no, salary, 
+							       CASE WHEN valid_open <= @valid_open THEN valid_open ELSE @valid_open END valid_open, 
+							       CASE WHEN valid_close <= @REQ_CLOSE THEN valid_close ELSE @valid_close END valid_close, 
+							       @txn_moment txn_open, @infinity txn_close 
+							FROM salaries 
+							WHERE emp_no = @emp_no 
+							  AND (
+							      valid_open >= @valid_open AND valid_close <= @valid_close) AND @txn_moment >= txn_open AND @txn_moment = txn_close 
+							UNION ALL 
+							SELECT emp_no, salary, @valid_close valid_open, valid_close, @txn_moment, @infinity FROM salaries 
+							WHERE emp_no = @emp_no AND @valid_close > valid_open AND @valid_close < valid_close`,
+		args...,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Update new history
-	_, err = tx.Exec("UPDATE salaries SET salary = 42 WHERE salary BETWEEN 82507 AND 85875 AND emp_no = @emp_no AND @txn_moment >= txn_open AND @txn_moment < txn_close",
+	_, err = tx.Exec(`UPDATE salaries SET salary = 42 WHERE salary BETWEEN 82507 AND 85875 AND emp_no = @emp_no AND @txn_moment >= txn_open AND @txn_moment < txn_close`,
 		args...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// View current snapshot
-	rows, err = tx.Query("SELECT * "+
-		"FROM salaries WHERE "+
-		"emp_no = @emp_no "+
-		"AND ("+
-		"    (@valid_open BETWEEN valid_open AND valid_close)"+
-		" OR (valid_open >= @valid_open AND valid_close <= @valid_close)"+
-		" OR (@valid_close BETWEEN valid_open AND valid_close)"+
-		") "+
-		"AND @txn_moment >= txn_open AND @txn_moment < txn_close "+
-		"ORDER BY valid_open",
-		args...,
-	)
+	rows, err = tx.Query(`SELECT * FROM salaries 
+         WHERE emp_no = @emp_no 
+           AND (
+               (@valid_open BETWEEN valid_open AND valid_close) 
+                   OR (valid_open >= @valid_open AND valid_close <= @valid_close) 
+                   OR (@valid_close BETWEEN valid_open AND valid_close)
+               ) AND @txn_moment >= txn_open AND @txn_moment < txn_close 
+         ORDER BY valid_open`, args...)
 	if err != nil {
 		t.Error(err)
 	}
