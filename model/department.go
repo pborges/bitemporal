@@ -38,12 +38,12 @@ type DepartmentRepository struct {
 }
 
 func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Department, error) {
-	row := r.repo.QueryRow(ctx, "SELECT dept_no, dept_name, valid_to, valid_from, transaction_from, transaction_to FROM departments$ WHERE dept_no=@dept_no ORDER BY transaction_from, valid_to", map[string]any{"dept_no": deptNo})
+	row := r.repo.QueryRow(ctx, "SELECT dept_no, dept_name, valid_close, valid_open, txn_open, txn_close FROM departments$ WHERE dept_no=@dept_no ORDER BY txn_open, valid_close", map[string]any{"dept_no": deptNo})
 	if row.Err() != nil {
 		return Department{}, row.Err()
 	}
 	department := Department{}
-	err := row.Scan(&department.DeptNo, &department.DeptName, &department.ValidTo, &department.ValidFrom, &department.TransactionFrom, &department.TransactionTo)
+	err := row.Scan(&department.DeptNo, &department.DeptName, &department.ValidClose, &department.ValidOpen, &department.TxnOpen, &department.TxnClose)
 	if err != nil {
 		return Department{}, err
 	}
@@ -51,7 +51,7 @@ func (r DepartmentRepository) ById(ctx context.Context, deptNo string) (Departme
 }
 
 func (r DepartmentRepository) AllRecords(ctx context.Context, deptNo string) ([]Department, error) {
-	rows, err := r.repo.Query(ctx, "SELECT dept_no, dept_name, valid_from, valid_to, transaction_from, transaction_to FROM departments WHERE dept_no=@emp_no ORDER BY transaction_from, valid_from", map[string]any{"emp_no": deptNo})
+	rows, err := r.repo.Query(ctx, "SELECT dept_no, dept_name, valid_open, valid_close, txn_open, txn_close FROM departments WHERE dept_no=@emp_no ORDER BY txn_open, valid_open", map[string]any{"emp_no": deptNo})
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r DepartmentRepository) AllRecords(ctx context.Context, deptNo string) ([]
 	var departments []Department
 	for rows.Next() {
 		var dept Department
-		err = rows.Scan(&dept.DeptNo, &dept.DeptName, &dept.ValidFrom, &dept.ValidTo, &dept.TransactionFrom, &dept.TransactionTo)
+		err = rows.Scan(&dept.DeptNo, &dept.DeptName, &dept.ValidOpen, &dept.ValidClose, &dept.TxnOpen, &dept.TxnClose)
 		if err != nil {
 			return nil, err
 		}

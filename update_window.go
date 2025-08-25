@@ -64,8 +64,8 @@ func CreatePeriodsQuery(window UpdateWindow) (QueryFragment, error) {
 
 	fragment := QueryFragment{
 		ArgMap: map[string]any{
-			"valid_from": window.ValidFrom,
-			"valid_to":   window.ValidTo,
+			"valid_open":  window.ValidFrom,
+			"valid_close": window.ValidTo,
 		},
 	}
 

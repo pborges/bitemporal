@@ -8,7 +8,7 @@
 -- Initial record: Jane Smith
 INSERT INTO employees (
     emp_no, birth_date, first_name, last_name, gender, hire_date,
-    valid_from, valid_to, transaction_from, transaction_to
+    valid_open, valid_close, txn_open, txn_close
 ) VALUES (
     12345, '1990-03-15', 'Jane', 'Smith', 'F', '2020-01-15',
     '2020-01-15', '2023-06-15', '2020-01-15 09:00:00', '2023-07-01 14:30:00'
@@ -18,7 +18,7 @@ INSERT INTO employees (
 -- Valid from marriage date, but recorded later by HR
 INSERT INTO employees (
     emp_no, birth_date, first_name, last_name, gender, hire_date,
-    valid_from, valid_to, transaction_from, transaction_to
+    valid_open, valid_close, txn_open, txn_close
 ) VALUES (
     12345, '1990-03-15', 'Jane', 'Johnson', 'F', '2020-01-15',
     '2023-06-15', '9999-12-31 23:59:59', '2023-07-01 14:30:00', '9999-12-31 23:59:59'
@@ -31,7 +31,7 @@ INSERT INTO employees (
 -- Close the previous "Smith" record early (valid until actual marriage date)
 INSERT INTO employees (
     emp_no, birth_date, first_name, last_name, gender, hire_date,
-    valid_from, valid_to, transaction_from, transaction_to
+    valid_open, valid_close, txn_open, txn_close
 ) VALUES (
     12345, '1990-03-15', 'Jane', 'Smith', 'F', '2020-01-15',
     '2020-01-15', '2023-06-10', '2023-08-15 10:15:00', '9999-12-31 23:59:59'
@@ -40,7 +40,7 @@ INSERT INTO employees (
 -- Create corrected "Johnson" record (valid from actual marriage date)
 INSERT INTO employees (
     emp_no, birth_date, first_name, last_name, gender, hire_date,
-    valid_from, valid_to, transaction_from, transaction_to
+    valid_open, valid_close, txn_open, txn_close
 ) VALUES (
     12345, '1990-03-15', 'Jane', 'Johnson', 'F', '2020-01-15',
     '2023-06-10', '9999-12-31 23:59:59', '2023-08-15 10:15:00', '9999-12-31 23:59:59'

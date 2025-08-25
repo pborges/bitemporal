@@ -38,7 +38,7 @@ type SalaryRepository struct {
 }
 
 func (r SalaryRepository) ForEmployee(ctx context.Context, empNo int64) ([]Salary, error) {
-	rows, err := r.repo.Query(ctx, "SELECT emp_no, salary, valid_to, valid_from, transaction_from, transaction_to FROM salaries$ WHERE emp_no=@emp_no ORDER BY transaction_from, valid_to", map[string]any{"emp_no": empNo})
+	rows, err := r.repo.Query(ctx, "SELECT emp_no, salary, valid_close, valid_open, txn_open, txn_close FROM salaries$ WHERE emp_no=@emp_no ORDER BY txn_open, valid_close", map[string]any{"emp_no": empNo})
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (r SalaryRepository) ForEmployee(ctx context.Context, empNo int64) ([]Salar
 	var salaries []Salary
 	for rows.Next() {
 		salary := Salary{}
-		err := rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidTo, &salary.ValidFrom, &salary.TransactionFrom, &salary.TransactionTo)
+		err := rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidClose, &salary.ValidOpen, &salary.TxnOpen, &salary.TxnClose)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func (r SalaryRepository) ForEmployee(ctx context.Context, empNo int64) ([]Salar
 }
 
 func (r SalaryRepository) AllRecords(ctx context.Context, empNo int64) ([]Salary, error) {
-	rows, err := r.repo.Query(ctx, "SELECT emp_no, salary, valid_from, valid_to, transaction_from, transaction_to FROM salaries WHERE emp_no=@emp_no ORDER BY transaction_from, valid_from", map[string]any{"emp_no": empNo})
+	rows, err := r.repo.Query(ctx, "SELECT emp_no, salary, valid_open, valid_close, txn_open, txn_close FROM salaries WHERE emp_no=@emp_no ORDER BY txn_open, valid_open", map[string]any{"emp_no": empNo})
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (r SalaryRepository) AllRecords(ctx context.Context, empNo int64) ([]Salary
 	var salaries []Salary
 	for rows.Next() {
 		var salary Salary
-		err = rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidFrom, &salary.ValidTo, &salary.TransactionFrom, &salary.TransactionTo)
+		err = rows.Scan(&salary.EmpNo, &salary.Salary, &salary.ValidOpen, &salary.ValidClose, &salary.TxnOpen, &salary.TxnClose)
 		if err != nil {
 			return nil, err
 		}

@@ -63,12 +63,12 @@ func (repo *TemporalDB) prepareQuery(ctx context.Context, fragment QueryFragment
 
 	// Add temporal parameters once
 	if !validMoment.IsZero() {
-		fragment.ArgMap["valid_from"] = validMoment
-		fragment.ArgMap["valid_to"] = validMoment
+		fragment.ArgMap["valid_open"] = validMoment
+		fragment.ArgMap["valid_close"] = validMoment
 	}
 	if !systemMoment.IsZero() {
-		fragment.ArgMap["transaction_from"] = systemMoment
-		fragment.ArgMap["transaction_to"] = systemMoment
+		fragment.ArgMap["txn_open"] = systemMoment
+		fragment.ArgMap["txn_close"] = systemMoment
 	}
 
 	// relies on the queryPlanner to ignore unused CTEs
@@ -77,10 +77,10 @@ func (repo *TemporalDB) prepareQuery(ctx context.Context, fragment QueryFragment
 		predicate := ""
 		var filters []string
 		if !validMoment.IsZero() {
-			filters = append(filters, "valid_from <= @valid_from AND @valid_to < valid_to")
+			filters = append(filters, "valid_open <= @valid_open AND @valid_close < valid_close")
 		}
 		if !systemMoment.IsZero() {
-			filters = append(filters, "transaction_from <= @transaction_from AND @transaction_to < transaction_to")
+			filters = append(filters, "txn_open <= @txn_open AND @txn_close < txn_close")
 		}
 		if !validMoment.IsZero() || !systemMoment.IsZero() {
 			predicate = " WHERE (" + strings.Join(filters, " AND ") + ")"

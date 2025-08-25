@@ -105,7 +105,7 @@ func importEmployees(db *sql.DB) error {
 
 	// Prepare the insert statement
 	stmt, err := tx.Prepare(`
-		INSERT INTO employees (emp_no, first_name, last_name, hire_date, birth_date, gender, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO employees (emp_no, first_name, last_name, hire_date, birth_date, gender, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -136,7 +136,7 @@ func importEmployees(db *sql.DB) error {
 			gender := match[5]
 			hireDate := match[6]
 
-			// For bitemporal, we set valid_from to hire_date and transaction_time to now
+			// For bitemporal, we set valid_open to hire_date and transaction_time to now
 			_, err := stmt.Exec(empNo, firstName, lastName, bitemporal.AsTime(hireDate), bitemporal.AsTime(birthDate), gender, bitemporal.AsTime(hireDate), EndOfTime, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting employee %s: %v", empNo, err)
@@ -171,7 +171,7 @@ func importDepartments(db *sql.DB) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO departments (dept_no, dept_name, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO departments (dept_no, dept_name, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -195,7 +195,7 @@ func importDepartments(db *sql.DB) error {
 			deptNo := match[1]
 			deptName := match[2]
 
-			_, err := stmt.Exec(deptNo, deptName, now, DbEpoch, EndOfTime, now, EndOfTime)
+			_, err := stmt.Exec(deptNo, deptName, DbEpoch, EndOfTime, now, EndOfTime)
 			if err != nil {
 				log.Printf("Error inserting department %s: %v", deptNo, err)
 				continue
@@ -222,7 +222,7 @@ func importDeptEmp(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO dept_emp (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO dept_emp (emp_no, dept_no, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -277,7 +277,7 @@ func importDeptManager(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO dept_manager (emp_no, dept_no, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO dept_manager (emp_no, dept_no, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -331,7 +331,7 @@ func importTitles(db *sql.DB) error {
 	defer file.Close()
 
 	stmt, err := db.Prepare(`
-		INSERT INTO titles (emp_no, title, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO titles (emp_no, title, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -385,7 +385,7 @@ func importSalaries(db *sql.DB) error {
 	}
 
 	stmt, err := db.Prepare(`
-		INSERT INTO salaries (emp_no, salary, valid_from, valid_to, transaction_from, transaction_to)
+		INSERT INTO salaries (emp_no, salary, valid_open, valid_close, txn_open, txn_close)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
